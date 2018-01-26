@@ -17,13 +17,13 @@ class Layer:
 		self.z = np.matmul(self.weights.T, self.inp) + self.bias
 		return self.activate(self.z)
 
-	def backprop(self, delta1, rate):
-		self.gradb = delta1
-		self.gradW = np.matmul(self.inp, self.delta1.T)
+	def backprop(self, delta1, rate, out): 
+		delta = np.multiply(delta1, self.act_deriv(self.z, out)) # this is the real delta
+		self.gradb = delta
+		self.gradW = np.matmul(self.inp, self.delta.T)
 		self.bias = self.bias - rate*self.gradb
 		self.weights = self.weights - rate*self.gradW
-		delta = np.multiply(np.matmul(self.weights, delta1), self.act_deriv(self.z))
-		return delta
+		return np.matmul(self.weights, delta), inp  # this is delta1, passes onto next layer; NOT delta of the next layer
 
 	def activate(self, x):
 		if(self.act == "sigmoid"):
@@ -31,24 +31,30 @@ class Layer:
 		if(self.act == 'softmax'):
 			return softmax(x)
 
-	def act_deriv(self,x):
+	def act_deriv(self,x, out):
 		if(self.act == 'sigmoid'):
-			return sig_deriv(x)
+			return sig_deriv(x, out)
 		if(self.act == 'softmax'):
-			return smax_deriv(x)
+			return smax_deriv(x, out)
 
 	def sigmoid(x):
 		return np.divide(1,np.add(1,np.exp(x)))
 
 
-	def sig_deriv(x):
-		return np.multiply(sigmoid(x),(1-sigmoid(x)))
+	def sig_deriv(x, out):
+		#return np.multiply(sigmoid(x),(1-sigmoid(x)))
+		return np.multiply(out,(1-out))
 
 	def softmax(x):
 		a0 = max(x, 0)
 		den = np.sum(np.exp(x-a0),0)
 		a = np.divide(np.exp(x-a0), den)
 		return a
+
+	# TODO: optimisation needed
+	def smax_deriv(x, out):
+		#return np.multiply(softmax(x), (1 -softmax(x)))
+		return np.multiply(out,(1-out)) 
 
 class NeuralNetwork:
 	def __init__(self, hidlayers, n_inputs, n_outputs, cost = 'crossent' , layers = None, rate = 0.01):
@@ -68,16 +74,18 @@ class NeuralNetwork:
 	def costFunc(self, trueval, out):
 		if (self.cost =="crossent")
 			error = - np.sum(np.multiply(trueval, np.log(out)), 0)
-			delta1 =  
-
+			delta1 =  - np.divide(trueval,out) # delta1 is NOT delta of the last layer, that is calculated within the layer
 		return error, delta1
 
 
 	def backProp(self, trueval, out):
-		_, delta1 = self.costFunc(trueval, out)
+		_, delta1 = self.costFunc(trueval, out) # trueval is a onehot encoded vector
+		o = out
+		# delta1 = trueval # because out cancels when this is multiplied by derv. of sigmoid/softmax, correspondigly modify those functions
 		for lr in reversed(self.layers):
-			delta = lr.backprop(delta1, self.rate)
+			delta, o2 = lr.backprop(delta1, self.rate, o)
 			delta1 = delta
+			o = o2
 
 
 ## Hyper-parameters
