@@ -19,7 +19,7 @@ class Layer:
 
 	def backprop(self, error, rate):
 		self.gradb = error
-		self.gradW = np.matmul(self.inp, self.z.T)
+		self.gradW = np.matmul(self.inp, self.error.T)
 		self.bias = self.bias - rate*self.gradb
 		self.weights = self.weights - rate*self.gradW
 		delta = np.multiply(np.matmul(self.weights, error), self.act_deriv(self.z))
@@ -72,7 +72,7 @@ class NeuralNetwork:
 
 	def backProp(self, trueval):
 		error = self.costFunc(trueval)
-		for lr in reversed(layers):
+		for lr in reversed(self.layers):
 			delta = lr.backprop(error, self.rate)
 			error = delta
 
