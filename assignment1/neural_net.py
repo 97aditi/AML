@@ -17,12 +17,12 @@ class Layer:
 		self.z = np.matmul(self.weights.T, self.inp) + self.bias
 		return self.activate(self.z)
 
-	def backprop(self, error, rate):
-		self.gradb = error
-		self.gradW = np.matmul(self.inp, self.error.T)
+	def backprop(self, delta1, rate):
+		self.gradb = delta1
+		self.gradW = np.matmul(self.inp, self.delta1.T)
 		self.bias = self.bias - rate*self.gradb
 		self.weights = self.weights - rate*self.gradW
-		delta = np.multiply(np.matmul(self.weights, error), self.act_deriv(self.z))
+		delta = np.multiply(np.matmul(self.weights, delta1), self.act_deriv(self.z))
 		return delta
 
 	def activate(self, x):
@@ -65,16 +65,19 @@ class NeuralNetwork:
 			out = lr.forward(out)
 		return out
 
-	def costFunc(self, trueval):
+	def costFunc(self, trueval, out):
 		if (self.cost =="crossent")
-			error = np.negative(np.sum(np.multiply(trueval, np.log(self.layers[hidlayers-1].z))))
+			error = - np.sum(np.multiply(trueval, np.log(out)), 0)
+			delta1 =  
+
+		return error, delta1
 
 
-	def backProp(self, trueval):
-		error = self.costFunc(trueval)
+	def backProp(self, trueval, out):
+		_, delta1 = self.costFunc(trueval, out)
 		for lr in reversed(self.layers):
-			delta = lr.backprop(error, self.rate)
-			error = delta
+			delta = lr.backprop(delta1, self.rate)
+			delta1 = delta
 
 
 ## Hyper-parameters
