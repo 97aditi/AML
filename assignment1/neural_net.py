@@ -17,11 +17,17 @@ class Layer:
 		self.z = np.matmul(self.weights.T, self.inp) + self.bias
 		return self.activate(self.z)
 
-	def backprop(self, error, rate):
+	def backprop(self, error, rate,  reg="none", l=0):
 		self.gradb = error
 		self.gradW = np.matmul(self.inp, self.z.T)
 		self.bias = self.bias - rate*self.gradb
 		self.weights = self.weights - rate*self.gradW
+		if(reg =='none')
+			self.weights = self.weights - rate*self.gradW
+		else if(reg == 'l2')
+			self.weights = self.weights - rate*self.gradW - rate*np.mutliply(l,self.weights)
+		else if(reg == 'l1')
+			self.weights = self.weights - rate*self.gradW - rate*np.multiply(l, np.sign(self.weights))
 		delta = np.multiply(np.matmul(self.weights, error), self.act_deriv(self.z))
 		return delta
 
@@ -67,13 +73,24 @@ class NeuralNetwork:
 
 	def costFunc(self, trueval):
 		if (self.cost =="crossent")
-			error = np.negative(np.sum(np.multiply(trueval, np.log(self.layers[hidlayers-1].z))))
+			f(reg == "none")
+				error = np.negative(np.sum(np.multiply(trueval, np.log(self.layers[hidlayers-1].z))))
+			if(reg == 'l2')
+				sum = 0
+				for i in range(hidlayers):
+					sum  = sum+np.sum(np.square(self.layers[i].weights))
+				error = np.negative(np.sum(np.multiply(trueval, np.log(self.layers[hidlayers-1].z)))) + l*sum
+			if(reg =='l1')
+				sum = 0
+				for i in range(hidlayers):
+					sum  = sum+np.sum(np.absolute(self.layers[i].weights))
+				error = np.negative(np.sum(np.multiply(trueval, np.log(self.layers[hidlayers-1].z)))) + l*sum
 
 
-	def backProp(self, trueval):
-		error = self.costFunc(trueval)
+	def backProp(self, trueval, reg="none", l=0):
+		error = self.costFunc(trueval, l, reg)
 		for lr in reversed(layers):
-			delta = lr.backprop(error, self.rate)
+			delta = lr.backprop(error, self.rate, reg, l)
 			error = delta
 
 
