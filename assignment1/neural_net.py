@@ -95,6 +95,46 @@ class Layer:
 		else return self.alpha
 
 
+class Batchnorm(Layer):
+	def __init__(self, units_prev)
+		self.inp = np.zeros((units_prev,1))
+		self.x_cap = np.zeros((units_prev,1))
+		self.units = units_prev
+		self.units_in_prev = units_prev
+		self.gamma = np.random.randn(units,1);
+		self.beta = np.random.randn();
+		self.z = np.zeros((units, 1)) # z = (w^l)T a^l-1 + b^l
+		self.gradbeta = None
+		self.gradgamma = None
+		self.mu = np.mean(self.inp, axis=0)
+		self.epsilon = 1e-8
+		self.var = np.var(self.inp, axis=0) + epsilon
+
+	def forward(gamma, beta, inp):
+		self.x_cap = np.divide(self.inp-mu, np.sqrt(var))
+		self.z = gamma*x_cap + beta
+		return self.z,mu,var,gamma,beta
+
+    def deriv(Z, delta1):
+    	m,D = Z.shape
+    	Xmean = self.inp - self.mu;
+    	inv_var = np.inverse(np.sqrt(self.var))
+    	gradXcap = delta1*self.gamma
+    	gradvar = np.sum(gradXcap*Xmean*(-0.5)*inv_var**3, axis=0)
+    	gradmu = np.sum(gradXcap*(-1)*inv_var, axis=0)+ np.mean(-2*Xmean, axis=0)
+		gradX = gradXnorm*inv_var+gradvar*2*Xmean/m+gradmu/m
+    	return gradX
+
+	def backprop(self, delta1, rate, out): 
+		delta = deriv(self.z, delta1) # this is the real delta
+		self.gradbeta = np.sum(delta,axis = 1)
+		self.gradgamma = np.sum(np.matmul(x_cap, self.delta.T), axis=1)
+		self.beta = self.beta - rate*self.gradbeta
+		self.gamma = self.gamma - rate*self.gradgamma
+		return np.matmul(self.weights, delta), inp
+
+
+
 class NeuralNetwork:
 	def __init__(self, hidlayers, n_inputs, n_outputs, cost = 'crossent' , layers = None, rate = 0.01):
 		self.hidlayers = hidlayers
