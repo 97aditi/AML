@@ -1,4 +1,5 @@
 import numpy as np
+import scipy.io as sio
 
 class Layer:
 	def __init__(self, units_prev, units, act = 'sigmoid')
@@ -19,8 +20,8 @@ class Layer:
 
 	def backprop(self, delta1, rate, out): 
 		delta = np.multiply(delta1, self.act_deriv(self.z, out)) # this is the real delta
-		self.gradb = delta
-		self.gradW = np.matmul(self.inp, self.delta.T)
+		self.gradb = np.sum(delta,axis = 1)
+		self.gradW = np.sum(np.matmul(self.inp, self.delta.T), axis=1)
 		self.bias = self.bias - rate*self.gradb
 		self.weights = self.weights - rate*self.gradW
 		return np.matmul(self.weights, delta), inp  # this is delta1, passes onto next layer; NOT delta of the next layer
@@ -87,6 +88,8 @@ class NeuralNetwork:
 			delta1 = delta
 			o = o2
 
+	def train(self):
+
 
 ## Hyper-parameters
 D = 784 # input dimension
@@ -95,3 +98,6 @@ alpha = 0.01
 
 neurons = [Layer(D,1024, 'sigmoid'), Layer(1024,512, 'sigmoid'), Layer(512,256, 'sigmoid'), Layer(256, 100, 'sigmoid'), Layer(100,m, 'softmax')]
 NN = NeuralNetwork(4, D, m, layers = neurons, rate = alpha)
+
+train = sio.loadmat()
+
