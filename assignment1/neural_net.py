@@ -2,7 +2,7 @@ import numpy as np
 import scipy.io as sio
 
 class Layer:
-	def __init__(self, units_prev, units, act = 'sigmoid')
+	def __init__(self, units_prev, units, act = 'sigmoid', train = True)
 		self.act = act         #weights, bias, z
 		self.inp = np.zeros((units_prev,1))
 		self.units = units
@@ -12,11 +12,14 @@ class Layer:
 		self.z = np.zeros((units, 1)) # z = (w^l)T a^l-1 + b^l
 		self.gradW = None
 		self.gradb = None
+		self.train = train 
 
-	def forward(self, inp):
+	def forward(self, inp, dropout = True, prob):
 		self.inp = inp
 		self.z = np.matmul(self.weights.T, self.inp) + self.bias
-		return self.activate(self.z)
+
+		return self.activate(self.z) 
+
 
 	def backprop(self, delta1, rate, out, reg="none", l=0): 
 		if(self.act == 'softmax'):
@@ -135,6 +138,31 @@ class NeuralNetwork:
 			o = o2
 
 	def train(self):
+
+
+class Dropout(Layer):
+	def __init__(self, prob):
+		self.prob = prob
+		self.drop = np.zeros((units, 1))
+
+	def forward(self, inp, prob):
+		self.inp = inp
+		self.z = np.matmul(self.weights.T, self.inp) + self.bias
+
+		if (train = True):
+			self.drop = np.random.binomial(1, prob, size = units.shape)
+ 			return np.multiply(self.activate(self.z), drop)
+		else:
+			return self.activate(self.z) * prob
+
+	def backprop(self, delta1, rate, out, prob): 
+		delta = np.multiply(delta1, self.act_deriv(self.z, out)) # this is the real delta
+		delta = np.multiply(delta, self.drop) 
+		self.gradb = np.sum(delta,axis = 1)
+		self.gradW = np.sum(np.matmul(self.inp, self.delta.T), axis=1)
+		self.bias = self.bias - rate*self.gradb
+		self.weights = self.weights - rate*self.gradW
+		return np.matmul(self.weights, delta), inp  # this is delta1, passes onto next layer; NOT delta of the next layer
 
 
 ## Hyper-parameters
