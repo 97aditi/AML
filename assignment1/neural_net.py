@@ -19,6 +19,8 @@ class Layer:
 		return self.activate(self.z)
 
 	def backprop(self, delta1, rate, out): 
+		if self.act == 'softmax':
+			delta = np.matmul(self.smax_deriv(self.z, out), delta1)
 		delta = np.multiply(delta1, self.act_deriv(self.z, out)) # this is the real delta
 		self.gradb = np.sum(delta,axis = 1)
 		self.gradW = np.sum(np.matmul(self.inp, self.delta.T), axis=1)
@@ -62,8 +64,8 @@ class Layer:
 
 	# TODO: optimisation needed
 	def smax_deriv(x, out):
-		#return np.multiply(softmax(x), (1 -softmax(x)))
-		return np.multiply(out,(1-out)) 
+		d = -np.matmul(out, out.T) + np.diag(np.sum(out, axis =1))
+		return d
 
 	def tanh(x):
 		num = np.sum(1, -1*np.exp(-2*x))
