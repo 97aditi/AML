@@ -18,14 +18,20 @@ class Layer:
 		self.z = np.matmul(self.weights.T, self.inp) + self.bias
 		return self.activate(self.z)
 
-	def backprop(self, delta1, rate, out): 
-		if self.act == 'softmax':
+	def backprop(self, delta1, rate, out, reg="none", l=0): 
+		if(self.act == 'softmax'):
 			delta = np.matmul(self.smax_deriv(self.z, out), delta1)
-		delta = np.multiply(delta1, self.act_deriv(self.z, out)) # this is the real delta
+    else:
+		  delta = np.multiply(delta1, self.act_deriv(self.z, out)) # this is the real delta
 		self.gradb = np.sum(delta,axis = 1)
 		self.gradW = np.sum(np.matmul(self.inp, self.delta.T), axis=1)
 		self.bias = self.bias - rate*self.gradb
-		self.weights = self.weights - rate*self.gradW
+		if(reg =='none')
+			self.weights = self.weights - rate*self.gradW
+		else if(reg == 'l2')
+			self.weights = self.weights - rate*self.gradW - rate*np.mutliply(l,self.weights)
+		else if(reg == 'l1')
+			self.weights = self.weights - rate*self.gradW - rate*np.multiply(l, np.sign(self.weights))
 		return np.matmul(self.weights, delta), inp  # this is delta1, passes onto next layer; NOT delta of the next layer
 
 	def activate(self, x, alpha = 0):
@@ -101,19 +107,30 @@ class NeuralNetwork:
 			out = lr.forward(out)
 		return out
 
-	def costFunc(self, trueval, out):
+	def costFunc(self, trueval, out, l=0, reg="none"):
 		if (self.cost =="crossent")
-			error = - np.sum(np.multiply(trueval, np.log(out)), 0)
-			delta1 =  - np.divide(trueval,out) # delta1 is NOT delta of the last layer, that is calculated within the layer
-		return error, delta1
+      error = - np.sum(np.multiply(trueval, np.log(out)), 0)
+      delta1 =  - np.divide(trueval,out) # delta1 is NOT delta of the last layer, that is calculated within the layer
+      if(reg == 'l2')
+        sum = 0
+        for i in range(hidlayers):
+          sum  = sum+np.sum(np.square(self.layers[i].weights))
+          error = error + l*sum
+      if(reg =='l1')
+        sum = 0
+        for i in range(hidlayers):
+          sum  = sum+np.sum(np.absolute(self.layers[i].weights))
+          error = error + l*sum
+    
+    return error, delta1
 
 
-	def backProp(self, trueval, out):
-		_, delta1 = self.costFunc(trueval, out) # trueval is a onehot encoded vector
+	def backProp(self, trueval, out, reg="none", l=0):
+		_, delta1 = self.costFunc(trueval, out, l, reg) # trueval is a onehot encoded vector
 		o = out
 		# delta1 = trueval # because out cancels when this is multiplied by derv. of sigmoid/softmax, correspondigly modify those functions
 		for lr in reversed(self.layers):
-			delta, o2 = lr.backprop(delta1, self.rate, o)
+			delta, o2 = lr.backprop(delta1, self.rate, o, reg, l)
 			delta1 = delta
 			o = o2
 
