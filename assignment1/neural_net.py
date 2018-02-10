@@ -73,7 +73,7 @@ class NeuralNetwork:
 
 	def costFunc(self, trueval):
 		if (self.cost =="crossent")
-			f(reg == "none")
+			if(reg == "none")
 				error = np.negative(np.sum(np.multiply(trueval, np.log(self.layers[hidlayers-1].z))))
 			if(reg == 'l2')
 				sum = 0
