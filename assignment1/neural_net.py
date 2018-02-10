@@ -111,7 +111,6 @@ class NeuralNetwork:
 		return out
 
 	def costFunc(self, trueval, out, l=0, reg="none"): # trueval should be (kxN), N = no. of samples in minibatch, k = no. of output units
-		def costFunc(self, trueval, out, l=0, reg="none"): # trueval should be (kxN), N = no. of samples in minibatch, k = no. of output units
 		if (self.cost =="crossent"):
 			error = - np.sum(np.multiply(trueval, np.log(out)))
 			delta1 =  - np.divide(trueval,out) # delta1 is NOT delta of the last layer, that is calculated within the layer
