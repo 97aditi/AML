@@ -26,17 +26,25 @@ class Layer:
 		self.weights = self.weights - rate*self.gradW
 		return np.matmul(self.weights, delta), inp  # this is delta1, passes onto next layer; NOT delta of the next layer
 
-	def activate(self, x):
+	def activate(self, x, alpha = 0):
 		if(self.act == "sigmoid"):
 			return sigmoid(x)
 		if(self.act == 'softmax'):
 			return softmax(x)
+		if(self.act == 'tanh'):
+			return tanh(x)
+		if(self.act == 'l_relu'):
+			return leaky_relu(x, alpha)
 
 	def act_deriv(self,x, out):
 		if(self.act == 'sigmoid'):
 			return sig_deriv(x, out)
 		if(self.act == 'softmax'):
 			return smax_deriv(x, out)
+		if(self.act == 'tanh'):
+			return tanh_deriv(out)
+		if(self.act == 'l_relu'):
+			return leaky_relu_deriv(x, alpha)
 
 	def sigmoid(x):
 		return np.divide(1,np.add(1,np.exp(x)))
@@ -56,6 +64,25 @@ class Layer:
 	def smax_deriv(x, out):
 		#return np.multiply(softmax(x), (1 -softmax(x)))
 		return np.multiply(out,(1-out)) 
+
+	def tanh(x):
+		num = np.sum(1, -1*np.exp(-2*x))
+		den = np.sum(1, np.exp(-2*x))
+		return (num/den)
+
+	def tanh_deriv(x, out):
+		return (1 - (out*out))
+
+	def leaky_relu(x, alpha):
+		if (x >= 0):
+			return x
+		else return (self.alpha * x)
+
+	def leaky_relu_deriv(x, alpha):
+		if (x >= 0):
+			return 1
+		else return self.alpha
+
 
 class NeuralNetwork:
 	def __init__(self, hidlayers, n_inputs, n_outputs, cost = 'crossent' , layers = None, rate = 0.01):
