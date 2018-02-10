@@ -126,7 +126,7 @@ class NeuralNetwork:
 				sum  = sum+np.sum(np.absolute(self.layers[i].weights))
 			error = error + l*sum
     
-    return error, delta1
+    	return error, delta1
 
 	def backProp(self, trueval, out, reg="none", l=0):
 		_, delta1 = self.costFunc(trueval, out, l, reg) # trueval is a onehot encoded vector
