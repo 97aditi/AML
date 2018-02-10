@@ -107,23 +107,26 @@ class NeuralNetwork:
 			out = lr.forward(out)
 		return out
 
-	def costFunc(self, trueval, out, l=0, reg="none"):
-		if (self.cost =="crossent")
-		error = - np.sum(np.multiply(trueval, np.log(out)), 0)
-		delta1 =  - np.divide(trueval,out) # delta1 is NOT delta of the last layer, that is calculated within the layer
-		if(reg == 'l2')
+	def costFunc(self, trueval, out, l=0, reg="none"): # trueval should be (kxN), N = no. of samples in minibatch, k = no. of output units
+		if (self.cost =="crossent"):
+			error = - np.sum(np.multiply(trueval, np.log(out)))
+			delta1 =  - np.divide(trueval,out) # delta1 is NOT delta of the last layer, that is calculated within the layer
+		else if (self.cost == "mse"):
+			error = np.sum((trueval - out)**2)/(2*trueval.shape[1])
+			delta1 = -(trueval-out)/trueval.shape[1]
+
+		if(reg == 'l2'):
 			sum = 0
 			for i in range(hidlayers):
 				sum  = sum+np.sum(np.square(self.layers[i].weights))
 			error = error + l*sum
-		if(reg =='l1')
+		if(reg =='l1'):
 			sum = 0
 			for i in range(hidlayers):
 				sum  = sum+np.sum(np.absolute(self.layers[i].weights))
 			error = error + l*sum
     
     return error, delta1
-
 
 	def backProp(self, trueval, out, reg="none", l=0):
 		_, delta1 = self.costFunc(trueval, out, l, reg) # trueval is a onehot encoded vector
