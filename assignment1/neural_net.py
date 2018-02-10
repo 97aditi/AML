@@ -21,8 +21,8 @@ class Layer:
 	def backprop(self, delta1, rate, out, reg="none", l=0): 
 		if(self.act == 'softmax'):
 			delta = np.matmul(self.smax_deriv(self.z, out), delta1)
-    else:
-		  delta = np.multiply(delta1, self.act_deriv(self.z, out)) # this is the real delta
+	    else:
+			delta = np.multiply(delta1, self.act_deriv(self.z, out)) # this is the real delta
 		self.gradb = np.sum(delta,axis = 1)
 		self.gradW = np.sum(np.matmul(self.inp, self.delta.T), axis=1)
 		self.bias = self.bias - rate*self.gradb
@@ -109,18 +109,18 @@ class NeuralNetwork:
 
 	def costFunc(self, trueval, out, l=0, reg="none"):
 		if (self.cost =="crossent")
-      error = - np.sum(np.multiply(trueval, np.log(out)), 0)
-      delta1 =  - np.divide(trueval,out) # delta1 is NOT delta of the last layer, that is calculated within the layer
-      if(reg == 'l2')
-        sum = 0
-        for i in range(hidlayers):
-          sum  = sum+np.sum(np.square(self.layers[i].weights))
-          error = error + l*sum
-      if(reg =='l1')
-        sum = 0
-        for i in range(hidlayers):
-          sum  = sum+np.sum(np.absolute(self.layers[i].weights))
-          error = error + l*sum
+		error = - np.sum(np.multiply(trueval, np.log(out)), 0)
+		delta1 =  - np.divide(trueval,out) # delta1 is NOT delta of the last layer, that is calculated within the layer
+		if(reg == 'l2')
+			sum = 0
+			for i in range(hidlayers):
+				sum  = sum+np.sum(np.square(self.layers[i].weights))
+			error = error + l*sum
+		if(reg =='l1')
+			sum = 0
+			for i in range(hidlayers):
+				sum  = sum+np.sum(np.absolute(self.layers[i].weights))
+			error = error + l*sum
     
     return error, delta1
 
