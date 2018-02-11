@@ -1,5 +1,6 @@
 import numpy as np
 import scipy.io as sio
+import matplotlib.pyplot as plt
 
 class Layer:
 	def __init__(self, units_prev, units, act = 'sigmoid', train = True)
