@@ -117,7 +117,15 @@ class NeuralNetwork:
 			delta1 = delta
 			o = o2
 
-	def train(self):
+	def train(self, X, y, batch = 64, iter = 1000):
+		idx = np.random.randint(X.shape[0], size = batch)
+		input_X = X[idx, :]
+		iteration = 0
+		while (iteration < self.iter):
+			outputs = self.forwardPass(self, input_X)
+			backProp(self, y, outputs)
+			iteration += 1 
+
 
 
 ## Hyper-parameters
