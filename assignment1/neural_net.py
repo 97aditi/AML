@@ -217,13 +217,20 @@ class Dropout(Layer):
 		return np.matmul(self.weights, delta), inp  # this is delta1, passes onto next layer; NOT delta of the next layer
 
 
-## Hyper-parameters
-D = 784 # input dimension
-m = 9 # no of classes
-alpha = 0.01
+if __name__ == '__main__':		
+	## Hyper-parameters
+	D = 784 # input dimension
+	m = 9 # no of classes
+	alpha = 0.01
 
-neurons = [Layer(D,512, 'sigmoid'), Layer(512,256, 'sigmoid'), Layer(256, 100, 'sigmoid'), Layer(100,m, 'softmax')]
-NN = NeuralNetwork(3, D, m, layers = neurons, rate = alpha)
+	neurons = [Layer(D,512, 'sigmoid'), Layer(512,256, 'sigmoid'), Layer(256, 100, 'sigmoid'), Layer(100,m, 'softmax')]
+	NN = NeuralNetwork(3, D, m, layers = neurons, rate = alpha)
 
-train = sio.loadmat()
-
+	data = sio.loadmat('../../EMNIST/balanced')
+	size = len(data['dataset'][0][0][0][0][0][0])
+	total_training_images = data['dataset'][0][0][0][0][0][0][:].reshape(max_, height, width, 1)
+	total_training_labels = data['dataset'][0][0][0][0][0][1][:]
+	ix = np.where(total_training_labels == 10 or total_training_labels == 13 or total_training_labels == 17 
+		or total_training_labels == 18 or total_training_labels == 19 or total_training_labels == 24)
+	images = total_training_images[ix]
+	labels = total_training_labels[ix]
