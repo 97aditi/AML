@@ -180,13 +180,14 @@ class NeuralNetwork:
 			delta1 = delta
 			o = o2
 
-	def train(self, X, y, batch = 64, iter = 1000):
-		idx = np.random.randint(X.shape[0], size = batch)
-		input_X = X[idx, :]
+	def train(self, X, y, batch = 64, n_epoch = 1000):
 		iteration = 0
-		while (iteration < self.iter):
-			outputs = self.forwardPass(self, input_X)
-			backProp(self, y, outputs)
+		while (iteration < n_epoch):
+			idx = np.random.randint(X.shape[0], size = batch)
+			input_X = X[idx, :]
+			input_y = y[idx, :]
+			outputs = self.forwardPass(input_X)
+			self.backProp(input_y, outputs)
 			iteration += 1 
 
 
@@ -220,8 +221,8 @@ D = 784 # input dimension
 m = 9 # no of classes
 alpha = 0.01
 
-neurons = [Layer(D,1024, 'sigmoid'), Layer(1024,512, 'sigmoid'), Layer(512,256, 'sigmoid'), Layer(256, 100, 'sigmoid'), Layer(100,m, 'softmax')]
-NN = NeuralNetwork(4, D, m, layers = neurons, rate = alpha)
+neurons = [Layer(D,512, 'sigmoid'), Layer(512,256, 'sigmoid'), Layer(256, 100, 'sigmoid'), Layer(100,m, 'softmax')]
+NN = NeuralNetwork(3, D, m, layers = neurons, rate = alpha)
 
 train = sio.loadmat()
 
