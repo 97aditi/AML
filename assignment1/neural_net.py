@@ -172,7 +172,7 @@ class NeuralNetwork:
     
     	return error, delta1
 
-	def backProp(self, trueval, out, reg="none", l=0):
+	def backProp(self, trueval, out, reg = "none", l=0):
 		_, delta1 = self.costFunc(trueval, out, l, reg) # trueval is a onehot encoded vector
 		o = out
 		# delta1 = trueval # because out cancels when this is multiplied by derv. of sigmoid/softmax, correspondigly modify those functions
@@ -181,20 +181,33 @@ class NeuralNetwork:
 			delta1 = delta
 			o = o2
 
-<<<<<<< HEAD
-	===
 	def train(self, X, y, batch = 64, n_epoch = 1000):
-		iteration = 0
-		while (iteration < n_epoch):
+		#index = np.random.randint(X.shape[0], size = X.shape[0]*0.8)
+		t_size = X.shape[0]*0.8
+		X_train = X[:t_size, :]
+		y_train = y[:t_size, :]
+		X_test = X[t_size: , :]  
+		y_test = y[t_size: , :]  
+		
+		train_error = np.zeros(n_epoch)
+		test_error = np.zeros(n_epoch)
+		i = 0 
+		while (i < n_epoch):
 			idx = np.random.randint(X.shape[0], size = batch)
-			input_X = X[idx, :]
-			input_y = y[idx, :]
-			outputs = self.forwardPass(input_X)
-			self.backProp(input_y, outputs)
->>>>>>> af4af87e2899c9c938cbdace1a63cb2dbb77d712
-			iteration += 1 
+			input_X = X_train[idx, :]
+			input_y = y_train[idx, :]
+			outputs = self.forwardPass(input_X.T)
+			self.backProp(input_y.T, outputs.T)
+			train_error[i], _ = self.costFunc(self, input_y, outputs)
+			outputs_test = self.forwardPass(X_test.T)
+			test_error[i], _ = self.costFunc(self, y_test, outputs_test) 
+			i += 1 
+			
+		plt.plot(n_epoch, train_error)
+		plt.plot(n_epoch, test_error)
+		plt.show()
 
-
+	
 class Dropout(Layer):
 	def __init__(self, prob):
 		self.prob = prob
