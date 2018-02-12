@@ -182,10 +182,13 @@ class NeuralNetwork:
 			o = o2
 
 	def train(self, X, y, batch = 64, n_epoch = 1000):
-		index = np.random.randint(X.shape[0], size = X.shape[0]*0.7)
-		X_train = X[index, :]
-		y_train = y[index, :]
-		X_test = X[!index, :] #Pakka galat hai ye 
+		#index = np.random.randint(X.shape[0], size = X.shape[0]*0.8)
+		t_size = X.shape[0]*0.8
+		X_train = X[:t_size, :]
+		y_train = y[:t_size, :]
+		X_test = X[t_size: , :]  
+		y_test = y[t_size: , :]  
+		
 		train_error = np.zeros(n_epoch)
 		test_error = np.zeros(n_epoch)
 		i = 0 
@@ -203,7 +206,7 @@ class NeuralNetwork:
 		plt.plot(n_epoch, train_error)
 		plt.plot(n_epoch, test_error)
 		plt.show()
-		
+
 	
 class Dropout(Layer):
 	def __init__(self, prob):
