@@ -216,6 +216,12 @@ class Dropout(Layer):
 		self.weights = self.weights - rate*self.gradW
 		return np.matmul(self.weights, delta), inp  # this is delta1, passes onto next layer; NOT delta of the next layer
 
+def make_onehot(y):
+	yoh = np.zeros(len(y),9)
+	labelmap = {10:0, 13:1, 16:2, 17:3, 18:4, 19:5, 20:6, 23:7, 24:8}
+	for i in rang(len(y)):
+		yoh[i, labelmap[y[i,0]] ] = 1
+	return yoh
 
 if __name__ == '__main__':		
 	## Hyper-parameters
@@ -231,7 +237,7 @@ if __name__ == '__main__':
 	total_training_labels = data['dataset'][0][0][0][0][0][1][:]
 	ix = np.where(total_training_labels == 10 or total_training_labels == 13 or total_training_labels == 17 
 		or total_training_labels == 18 or total_training_labels == 19 or total_training_labels == 24)
-	labels = total_training_labels[ix]
+	labels = make_onehot(total_training_labels[ix])
 	train_size = len(labels)
 	#images = total_training_images[ix].reshape(train_size, 28, 28, 1)
 	images = total_training_images[ix]
@@ -240,7 +246,7 @@ if __name__ == '__main__':
     total_testing_labels = data['dataset'][0][0][1][0][0][1][:]
     ix = np.where(total_testing_labels == 10 or total_testing_labels == 13 or total_testing_labels == 17 
 		or total_testing_labels == 18 or total_testing_labels == 19 or total_testing_labels == 24)
-    test_labels = total_testing_labels[ix]
+    test_labels = make_onehot(total_testing_labels[ix])
     test_images = total_testing_images[ix]
 
     NN.train(images, labels)
