@@ -181,6 +181,8 @@ class NeuralNetwork:
 			delta1 = delta
 			o = o2
 
+<<<<<<< HEAD
+	===
 	def train(self, X, y, batch = 64, n_epoch = 1000):
 		iteration = 0
 		while (iteration < n_epoch):
@@ -189,6 +191,7 @@ class NeuralNetwork:
 			input_y = y[idx, :]
 			outputs = self.forwardPass(input_X)
 			self.backProp(input_y, outputs)
+>>>>>>> af4af87e2899c9c938cbdace1a63cb2dbb77d712
 			iteration += 1 
 
 
@@ -229,14 +232,15 @@ if __name__ == '__main__':
 	m = 9 # no of classes
 	alpha = 0.01
 
-	neurons = [Layer(D,512, 'sigmoid'), Layer(512,256, 'sigmoid'), Layer(256, 100, 'sigmoid'), Layer(100,m, 'softmax')]
+	neurons = [Layer(D, 512, 'sigmoid'), Layer(512,256, 'sigmoid'), Layer(256, 100, 'sigmoid'), Layer(100,m, 'softmax')]
 	NN = NeuralNetwork(3, D, m, layers = neurons, rate = alpha)
 
 	data = sio.loadmat('../../EMNIST/balanced')
 	total_training_images = data['dataset'][0][0][0][0][0][0][:]
 	total_training_labels = data['dataset'][0][0][0][0][0][1][:]
 	ix = np.where(total_training_labels == 10 or total_training_labels == 13 or total_training_labels == 17 
-		or total_training_labels == 18 or total_training_labels == 19 or total_training_labels == 24)
+		or total_training_labels == 18 or total_training_labels == 19 or total_training_labels == 24 
+		or total_training_labels == 16 or total_training_labels == 23 or total_training_labels == 20)
 	labels = make_onehot(total_training_labels[ix])
 	train_size = len(labels)
 	#images = total_training_images[ix].reshape(train_size, 28, 28, 1)
@@ -244,9 +248,10 @@ if __name__ == '__main__':
 
 	total_testing_images = data['dataset'][0][0][1][0][0][0][:]
     total_testing_labels = data['dataset'][0][0][1][0][0][1][:]
-    ix = np.where(total_testing_labels == 10 or total_testing_labels == 13 or total_testing_labels == 17 
-		or total_testing_labels == 18 or total_testing_labels == 19 or total_testing_labels == 24)
-    test_labels = make_onehot(total_testing_labels[ix])
+    ix = np.where(total_training_labels == 10 or total_training_labels == 13 or total_training_labels == 17 
+		or total_training_labels == 18 or total_training_labels == 19 or total_training_labels == 24 
+		or total_training_labels == 16 or total_training_labels == 23 or total_training_labels == 20)
+	test_labels = make_onehot(total_testing_labels[ix])
     test_images = total_testing_images[ix]
 
     NN.train(images, labels)
