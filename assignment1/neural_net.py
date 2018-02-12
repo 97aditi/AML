@@ -200,7 +200,7 @@ class NeuralNetwork:
 			input_y = y_train[idx, :]
 			outputs = self.forwardPass(input_X.T)
 			self.backProp(input_y.T, outputs)
-			train_error[i], _ = self.costFunc(input_y.T, outputs)
+			train_error[i], _ = self.costFunc(input_y.T, outputs, 0, 'none')
 			outputs_test = self.forwardPass(X_test.T)
 			test_error[i], _ = self.costFunc(y_test.T, outputs_test, 0, 'none') 
 			i += 1 
@@ -211,6 +211,10 @@ class NeuralNetwork:
 		plt.ylabel('error')
 		plt.legend()
 		plt.show()
+
+	def predict(self, inputarr):
+		out = self.forwardPass(inputarr.T)
+		return out.T
 
 	
 class Dropout(Layer):
@@ -268,6 +272,15 @@ def load_data(path):
 
 	return (labels, images, test_labels, test_images)
 
+def accuracy(result, truth):
+	res = np.max(result,1)
+	tru = np.max(truth, 1)
+	ix = res == tru
+	correct = np.sum(ix)
+	total = res.shape[0]
+	percent_acc = (correct/total)*100
+	return percent_acc
+
 if __name__ == '__main__':		
 	## Hyper-parameters
 	D = 784 # input dimension
@@ -280,4 +293,6 @@ if __name__ == '__main__':
 	labels, images, test_labels, test_images = load_data('C:/Users/Saksham Soni/Documents/Courses/ELL888/EMNIST/emnist-balanced')
 
 	NN.train(images, labels)
-	#test_out = NN.forwardPass(test_images)
+	test_out = NN.predict(test_images)
+	error = accuracy(test_out, test_labels)
+	print (error,"%")
