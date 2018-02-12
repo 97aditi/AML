@@ -27,8 +27,8 @@ class Layer:
 			delta = np.matmul(self.smax_deriv(self.z, out), delta1)
 		else:
 			delta = np.multiply(delta1, self.act_deriv(self.z, out)) # this is the real delta
-		self.gradb = np.sum(delta,axis = 1)
-		self.gradW = np.sum(np.matmul(self.inp, delta.T), axis=1)
+		self.gradb = np.sum(delta,axis = 1).reshape(self.units,1)
+		self.gradW = np.matmul(self.inp, delta.T)
 		self.bias = self.bias - rate*self.gradb
 		if(reg =='none'):
 			self.weights = self.weights - rate*self.gradW
@@ -36,7 +36,7 @@ class Layer:
 			self.weights = self.weights - rate*self.gradW - rate*np.mutliply(l,self.weights)
 		elif(reg == 'l1'):
 			self.weights = self.weights - rate*self.gradW - rate*np.multiply(l, np.sign(self.weights))
-		return np.matmul(self.weights, delta), inp  # this is delta1, passes onto next layer; NOT delta of the next layer
+		return np.matmul(self.weights, delta), self.inp  # this is delta1, passes onto next layer; NOT delta of the next layer
 
 	def activate(self, x, alpha = 0):
 		if(self.act == "sigmoid"):
@@ -59,7 +59,7 @@ class Layer:
 			return self.leaky_relu_deriv(x, alpha)
 
 	def sigmoid(self, x):
-		return np.divide(1,np.add(1,np.exp(x)))
+		return np.divide(1,np.add(1,-np.exp(x)))
 
 
 	def sig_deriv(self,x, out):
@@ -200,13 +200,16 @@ class NeuralNetwork:
 			input_y = y_train[idx, :]
 			outputs = self.forwardPass(input_X.T)
 			self.backProp(input_y.T, outputs)
-			train_error[i], _ = self.costFunc(self, input_y.T, outputs)
+			train_error[i], _ = self.costFunc(input_y.T, outputs)
 			outputs_test = self.forwardPass(X_test.T)
-			test_error[i], _ = self.costFunc(self, y_test.T, outputs_test) 
+			test_error[i], _ = self.costFunc(y_test.T, outputs_test, 0, 'none') 
 			i += 1 
 			
-		plt.plot(n_epoch, train_error)
-		plt.plot(n_epoch, test_error)
+		plt.plot(np.arange(1,n_epoch+1), train_error, label='training error')
+		plt.plot(np.arange(1,n_epoch+1), test_error, label='validation error')
+		plt.xlabel('no. of epochs')
+		plt.ylabel('error')
+		plt.legend()
 		plt.show()
 
 	
