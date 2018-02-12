@@ -227,10 +227,26 @@ if __name__ == '__main__':
 	NN = NeuralNetwork(3, D, m, layers = neurons, rate = alpha)
 
 	data = sio.loadmat('../../EMNIST/balanced')
-	size = len(data['dataset'][0][0][0][0][0][0])
-	total_training_images = data['dataset'][0][0][0][0][0][0][:].reshape(max_, height, width, 1)
+	total_training_images = data['dataset'][0][0][0][0][0][0][:]
 	total_training_labels = data['dataset'][0][0][0][0][0][1][:]
 	ix = np.where(total_training_labels == 10 or total_training_labels == 13 or total_training_labels == 17 
 		or total_training_labels == 18 or total_training_labels == 19 or total_training_labels == 24)
-	images = total_training_images[ix]
 	labels = total_training_labels[ix]
+	train_size = len(labels)
+	#images = total_training_images[ix].reshape(train_size, 28, 28, 1)
+	images = total_training_images[ix]
+
+	total_testing_images = data['dataset'][0][0][1][0][0][0][:]
+    total_testing_labels = data['dataset'][0][0][1][0][0][1][:]
+    ix = np.where(total_testing_labels == 10 or total_testing_labels == 13 or total_testing_labels == 17 
+		or total_testing_labels == 18 or total_testing_labels == 19 or total_testing_labels == 24)
+    test_labels = total_testing_labels[ix]
+    test_images = total_testing_images[ix]
+
+    NN.train(images, labels)
+    """
+     TODO: 
+      plot training curve, 
+      plot CV curve, 
+      final test accuracy, debugging 
+    """
