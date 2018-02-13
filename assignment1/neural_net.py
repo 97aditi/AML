@@ -39,17 +39,17 @@ class Layer:
 		self.gradb = np.sum(delta,axis = 1).reshape(self.units,1)
 		self.gradW = np.matmul(self.inp, delta.T)
 		self.bias = self.bias - rate*self.gradb
-		print("Gradients")
-		print(self.gradW.shape)
-		print("Delta")
-		print(delta.shape)
-		print(self.inp.shape)
+		#print("Gradients")
+		#print(self.gradW.shape)
+		#print("Delta")
+		#print(delta.shape)
+		#print(self.inp.shape)
 		if(reg =='none'):
 			self.weights = self.weights - rate*self.gradW
 		elif(reg == 'l2'):
-			self.weights = self.weights - rate*self.gradW - rate*np.mutliply(l,self.weights)
+			self.weights = self.weights - rate*self.gradW - rate*l*self.weights
 		elif(reg == 'l1'):
-			self.weights = self.weights - rate*self.gradW - rate*np.multiply(l, np.sign(self.weights))
+			self.weights = self.weights - rate*self.gradW - rate*l*np.sign(self.weights)
 		return np.matmul(self.weights, delta), self.inp  # this is delta1, passes onto next layer; NOT delta of the next layer
 
 	def activate(self, x):
@@ -155,14 +155,13 @@ class Batchnorm(Layer):
 
 
 class NeuralNetwork:
-	def __init__(self, n_layers, n_inputs, n_outputs, cost = 'crossent' , layers = None, rate = 0.01, reg="none"):
+	def __init__(self, n_layers, n_inputs, n_outputs, cost = 'crossent' , layers = None, rate = 0.01):
 		self.n_layers = n_layers
 		self.n_inputs = n_inputs
 		self.n_outputs = n_outputs
 		self.layers = layers
 		self.rate = rate
 		self.cost = cost
-		self.reg = reg
              
 	def forwardPass(self, inputarr):
 		out = inputarr # should be D x N
@@ -170,7 +169,7 @@ class NeuralNetwork:
 			out = lr.forward(out)
 		return out
 
-	def costFunc(self, trueval, out, l=0): 
+	def costFunc(self, trueval, out, l=0, reg = "none"): 
 		# trueval should be (kxN), N = no. of samples in minibatch, k = no. of output units
 		n = trueval.shape[1]
 		if (self.cost =="crossent"):
@@ -185,12 +184,12 @@ class NeuralNetwork:
 			error = np.sum((trueval - out)**2)/(2*n)
 			delta1 = -(trueval-out)/n
 
-		if(self.reg == 'l2'):
+		if(reg == 'l2'):
 			sum = 0
 			for i in range(self.n_layers):
 				sum  = sum+np.sum(np.square(self.layers[i].weights))
 			error = error + l*sum
-		elif(self.reg =='l1'):
+		elif(reg =='l1'):
 			sum = 0
 			for i in range(self.n_layers):
 				sum  = sum+np.sum(np.absolute(self.layers[i].weights))
@@ -202,11 +201,11 @@ class NeuralNetwork:
 		_, delta1 = self.costFunc(trueval, out, l, reg) # trueval is a onehot encoded vector
 		o = out
 		for lr in reversed(self.layers):
-			delta, o2 = lr.backprop(delta1, self.rate, o, reg, l, cost=self.cost)
+			delta, o2 = lr.backprop(delta1, self.rate, o, reg=reg, l=l, cost=self.cost)
 			delta1 = delta
 			o = o2
 
-	def train(self, X, y, batch = 40, n_epoch = 5):
+	def train(self, X, y, batch = 40, n_epoch = 5, l = 0, reg = "none"):
 		#index = np.random.randint(X.shape[0], size = X.shape[0]*0.8)
 		t_size = int(X.shape[0]*0.8)
 		X_train = X[:t_size, :]
@@ -229,9 +228,9 @@ class NeuralNetwork:
 			input_y = y_train[idx, :]
 			outputs = self.forwardPass(input_X.T)
 			# print (outputs)
-			self.backProp(input_y.T, outputs)
+			self.backProp(input_y.T, outputs, reg=reg, l=l)
 			#train_error[i], _ = self.costFunc(input_y.T, outputs, 0, 'none')
-			train_acc[i] = accuracy(input_y, output.T)
+			train_acc[i] = accuracy(input_y, outputs.T)
 			outputs_test = self.forwardPass(X_test.T)
 			#test_error[i], _ = self.costFunc(y_test.T, outputs_test, 0, 'none') 
 			test_acc[i] = accuracy(y_test, outputs_test.T)
@@ -321,12 +320,13 @@ if __name__ == '__main__':
 	m = 9 # no of classes
 	lrate = 1e-3
 
-	neurons = [Layer(D, 256, 'sigmoid'),  Layer(256,m, 'softmax')]
-	NN = NeuralNetwork(2, D, m, cost = 'crossent', layers = neurons, rate = lrate)
+	neurons = [Layer(D, 512, 'l_relu', alpha = 0.01), Layer(512,256, 'l_relu', alpha = 0.01), 
+	Layer(256, 100, 'l_relu', alpha = 0.01), Layer(100,m, 'softmax')]
+	NN = NeuralNetwork(4, D, m, cost = 'crossent', layers = neurons, rate = lrate)
 
-	labels, images, test_labels, test_images = load_data('emnist-balanced.mat')
+	labels, images, test_labels, test_images = load_data('assignment1/emnist-balanced')
 
-	NN.train(images, labels, n_epoch=1)
+	NN.train(images, labels, n_epoch=1000, batch=16, reg="l2", l = 1)
 
 	test_out = NN.predict(test_images)
 	error = accuracy(test_out, test_labels)
