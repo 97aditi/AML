@@ -22,7 +22,6 @@ class Layer:
 		self.z = np.matmul(self.weights.T, self.inp) + self.bias
 		return self.activate(self.z)
 
-
 	def backprop(self, delta1, rate, out, reg="none", l=0, cost = "crossent"): 
 		if(self.act == 'softmax'):
 			if (cost=="crossent"):
@@ -33,17 +32,12 @@ class Layer:
 				i = 0
 				for s in smax_:
 					delta[:,i] = np.matmul(s, delta1[:,i])
-					i+=1
+					i+=1                                                                         
 		else:
 			delta = np.multiply(delta1, self.act_deriv(self.z, out)) # this is the real delta
 		self.gradb = np.sum(delta,axis = 1).reshape(self.units,1)
 		self.gradW = np.matmul(self.inp, delta.T)
 		self.bias = self.bias - rate*self.gradb
-		#print("Gradients")
-		#print(self.gradW.shape)
-		#print("Delta")
-		#print(delta.shape)
-		#print(self.inp.shape)
 		if(reg =='none'):
 			self.weights = self.weights - rate*self.gradW
 		elif(reg == 'l2'):
@@ -78,7 +72,6 @@ class Layer:
 
 
 	def sig_deriv(self,x, out):
-		#return np.multiply(sigmoid(x),(1-sigmoid(x)))
 		return np.multiply(out,(1-out))
 
 	def softmax(self, x):
@@ -115,24 +108,25 @@ class Layer:
 
 
 class Batchnorm(Layer):
-	def __init__(self, units_prev):
+	def __init__(self, units_prev, act='none'):
+		self.act=act
 		self.inp = np.zeros((units_prev,1))
 		self.x_cap = np.zeros((units_prev,1))
 		self.units = units_prev
 		self.units_in_prev = units_prev
-		self.gamma = np.random.randn(units,1);
+		self.gamma = np.random.randn(self.units,1);
 		self.beta = np.random.randn();
-		self.z = np.zeros((units, 1)) # z = (w^l)T a^l-1 + b^l
+		self.z = np.zeros((self.units, 1)) # z = (w^l)T a^l-1 + b^l
 		self.gradbeta = None
 		self.gradgamma = None
 		self.mu = np.mean(self.inp, axis=0)
 		self.epsilon = 1e-8
-		self.var = np.var(self.inp, axis=0) + epsilon
+		self.var = np.var(self.inp, axis=0) + self.epsilon
 
-	def forward(gamma, beta, inp):
-		self.x_cap = np.divide(self.inp-mu, np.sqrt(var))
-		self.z = gamma*x_cap + beta
-		return self.z,mu,var,gamma,beta
+	def forward(self,inp):
+		self.x_cap = np.divide(self.inp-self.mu, np.sqrt(self.var))
+		self.z = self.gamma*self.x_cap + self.beta
+		return self.z
 
 	def deriv(Z, delta1):
 		m,D = Z.shape
@@ -144,7 +138,7 @@ class Batchnorm(Layer):
 		gradX = gradXnorm*inv_var+gradvar*2*Xmean/m+gradmu/m
 		return gradX
 
-	def backprop(self, delta1, rate, out): 
+	def backprop(self, delta1, rate, out,reg = "none", l=0, cost = "crossent"): 
 		delta = deriv(self.z, delta1) # this is the real delta
 		self.gradbeta = np.sum(delta,axis = 1)
 		self.gradgamma = np.sum(np.matmul(x_cap, self.delta.T), axis=1)
@@ -187,8 +181,7 @@ class NeuralNetwork:
 		if(reg == 'l2'):
 			sum = 0
 			for i in range(self.n_layers):
-				sum  = sum+np.sum(np.square(self.layers[i].weights))
-			error = error + l*sum
+				sum  = sum+epsilon+ l*sum
 		elif(reg =='l1'):
 			sum = 0
 			for i in range(self.n_layers):
@@ -216,7 +209,7 @@ class NeuralNetwork:
 		Xu = np.mean(X_test, axis=0)
 		X_test = (X_test-Xu)/255.0  
 		y_test = y[t_size: , :]  
-		
+		initial=self.layers[0].weights[0,:1]
 		train_error = np.zeros(n_epoch)
 		test_error = np.zeros(n_epoch)
 		#train_acc = np.zeros(n_epoch)
@@ -235,14 +228,17 @@ class NeuralNetwork:
 			test_error[i], _ = self.costFunc(y_test.T, outputs_test, 0, 'none') 
 			#test_acc[i] = accuracy(y_test, outputs_test.T)
 			i += 1
+			# print("weights") 
+			# initial=self.layers[0].weights[0,:1]
 			if (i%10==0): print(i, train_error[i-1]) 
-			
-		plt.plot(np.arange(1,n_epoch+1), train_error, label='training error')
-		plt.plot(np.arange(1,n_epoch+1), test_error, label='validation error')
-		plt.xlabel('no. of epochs')
-		plt.ylabel('error')
-		plt.legend()
-		plt.show()
+		print(initial-self.layers[0].weights[0,:])
+		print(np.count_nonzero(initial-self.layers[0].weights[0,:]))
+		# plt.plot(np.arange(1,n_epoch+1), train_error, label='training error')
+		# plt.plot(np.arange(1,n_epoch+1), test_error, label='validation error')
+		# plt.xlabel('no. of epochs')
+		# plt.ylabel('error')
+		# plt.legend()
+		# plt.show()
 
 	def predict(self, inputarr):
 		out = self.forwardPass(inputarr.T)
@@ -303,7 +299,7 @@ def load_data(path):
 	test_labels = make_onehot(total_testing_labels[ix])
 	test_images = total_testing_images[ix]
 
-	return (labels, images, test_labels, test_images)
+	return (labels, images, test_labels,test_images)
 
 def accuracy(result, truth):
 	res = np.argmax(result,1)
@@ -311,7 +307,7 @@ def accuracy(result, truth):
 	ix = res == tru
 	correct = np.sum(ix)
 	total = res.shape[0]
-	percent_acc = ((correct*1.0)/(total*1.0))*100.0
+	percent_acc = (correct*(1.0)/total)*100
 	return percent_acc
 
 if __name__ == '__main__':		
@@ -319,15 +315,12 @@ if __name__ == '__main__':
 	D = 784 # input dimension
 	m = 9 # no of classes
 	lrate = 1e-3
+	neurons = [Layer(D, 256, 'sigmoid'), Batchnorm(256), Layer(256,m, 'softmax')]
+	NN = NeuralNetwork(2, D, m, cost = 'crossent', layers = neurons, rate = lrate)
 
-	neurons = [Layer(D, 512, 'l_relu', alpha = 0.01), Layer(512,256, 'l_relu', alpha = 0.01), 
-	Layer(256, 100, 'l_relu', alpha = 0.01), Layer(100,m, 'softmax')]
-	NN = NeuralNetwork(4, D, m, cost = 'crossent', layers = neurons, rate = lrate)
 
-	labels, images, test_labels, test_images = load_data('assignment1/emnist-balanced')
-
-	NN.train(images, labels, n_epoch=1000, batch=32, reg="l2", l=0.1)
-
+	labels, images, test_labels, test_images = load_data('emnist-balanced.mat')
+	NN.train(images, labels, n_epoch=2000)
 	test_out = NN.predict(test_images)
 	error = accuracy(test_out, test_labels)
 	print (error,"%")
