@@ -8,7 +8,7 @@ class Layer:
 		self.inp = np.zeros((units_prev,1))
 		self.units = units
 		self.units_in_prev = units_prev
-		self.weights = np.random.randn(units_prev, units)   #Try xavier initialisation                    
+		self.weights = np.random.randn(units_prev, units).astype(np.float64)*np.sqrt(1.0/units_prev)   #Try xavier initialisation                    
 		self.bias = np.random.randn(units,1)
 		self.z = np.zeros((units, 1)) # z = (w^l)T a^l-1 + b^l
 		self.gradW = None
@@ -19,7 +19,9 @@ class Layer:
 	def forward(self, inp):
 		self.inp = inp
 		self.z = np.matmul(self.weights.T, self.inp) + self.bias
-		return self.activate(self.z) 
+		a = self.activate(self.z)
+		print(a)
+		return a 
 
 
 	def backprop(self, delta1, rate, out, reg="none", l=0, cost = "crossent"): 
@@ -157,6 +159,7 @@ class NeuralNetwork:
 			error = - np.sum(np.multiply(trueval, np.log(out+1e-20)))
 			if(self.layers[self.n_layers-1].act == "softmax"):
 				delta1 = out - trueval
+				#print(delta1)
 			else: 
 				delta1 =  - np.divide(trueval,out+1e-20) # delta1 is NOT delta of the last layer, that is calculated within the layer
 		elif (self.cost == "mse"):
@@ -188,9 +191,9 @@ class NeuralNetwork:
 	def train(self, X, y, batch = 64, n_epoch = 1000):
 		#index = np.random.randint(X.shape[0], size = X.shape[0]*0.8)
 		t_size = int(X.shape[0]*0.8)
-		X_train = X[:t_size, :]/256.0
+		X_train = X[:t_size, :]/255.0
 		y_train = y[:t_size, :]
-		X_test = X[t_size: , :]/256.0  
+		X_test = X[t_size: , :]/255.0  
 		y_test = y[t_size: , :]  
 		
 		train_error = np.zeros(n_epoch)
@@ -201,6 +204,7 @@ class NeuralNetwork:
 			input_X = X_train[idx, :]
 			input_y = y_train[idx, :]
 			outputs = self.forwardPass(input_X.T)
+			print (outputs)
 			self.backProp(input_y.T, outputs)
 			train_error[i], _ = self.costFunc(input_y.T, outputs, 0, 'none')
 			outputs_test = self.forwardPass(X_test.T)
@@ -276,8 +280,8 @@ def load_data(path):
 	return (labels, images, test_labels, test_images)
 
 def accuracy(result, truth):
-	res = np.max(result,1)
-	tru = np.max(truth, 1)
+	res = np.argmax(result,1)
+	tru = np.argmax(truth, 1)
 	ix = res == tru
 	correct = np.sum(ix)
 	total = res.shape[0]
@@ -290,12 +294,12 @@ if __name__ == '__main__':
 	m = 9 # no of classes
 	lrate = 1e-4
 
-	neurons = [Layer(D, 512, 'l_relu', alpha=0.01), Layer(512,256, 'l_relu', alpha=0.01), Layer(256, 100, 'l_relu', alpha=0.01), Layer(100,m, 'softmax')]
+	neurons = [Layer(D, 512, 'sigmoid'), Layer(512,256, 'sigmoid'), Layer(256, 100, 'sigmoid'), Layer(100,m, 'softmax')]
 	NN = NeuralNetwork(4, D, m, cost = 'crossent', layers = neurons, rate = lrate)
 
 	labels, images, test_labels, test_images = load_data('C:/Users/Saksham Soni/Documents/Courses/ELL888/EMNIST/emnist-balanced')
 
-	NN.train(images, labels, n_epoch=100)
+	NN.train(images, labels, n_epoch=1, batch=2)
 	test_out = NN.predict(test_images)
 	error = accuracy(test_out, test_labels)
 	print (error,"%")
