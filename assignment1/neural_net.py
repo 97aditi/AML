@@ -8,7 +8,9 @@ class Layer:
 		self.inp = np.zeros((units_prev,1))
 		self.units = units
 		self.units_in_prev = units_prev
-		self.weights = np.random.randn(units_prev, units).astype(np.float64)*np.sqrt(1.0/units_prev)   #xavier initialisation                    
+		self.weights = np.random.randn(units_prev, units).astype(np.float64)*np.sqrt(1.0/units_prev) 
+		# print("Weights Initial")
+		print(self.weights)  #xavier initialisation                    
 		self.bias = np.random.randn(units,1)
 		self.z = np.zeros((units, 1)) # z = (w^l)T a^l-1 + b^l
 		self.gradW = None
@@ -38,6 +40,11 @@ class Layer:
 		self.gradb = np.sum(delta,axis = 1).reshape(self.units,1)
 		self.gradW = np.matmul(self.inp, delta.T)
 		self.bias = self.bias - rate*self.gradb
+		print("Gradients")
+		print(self.gradW.shape)
+		print("Delta")
+		print(delta.shape)
+		print(self.inp.shape)
 		if(reg =='none'):
 			self.weights = self.weights - rate*self.gradW
 		elif(reg == 'l2'):
@@ -67,6 +74,7 @@ class Layer:
 			return self.leaky_relu_deriv(x)
 
 	def sigmoid(self, x):
+		x=np.clip(x,-500,500)
 		return np.divide(1,np.add(1,np.exp(-x)))
 
 
@@ -90,8 +98,8 @@ class Layer:
 		return d
 
 	def tanh(self, x):
-		num = np.sum(1, -1*np.exp(-2*x))
-		den = np.sum(1, np.exp(-2*x))
+		num = np.sum(1, -1*np.exp(-np.multiply(2,x)))
+		den = np.sum(1, np.exp(--np.multiply(2,x)))
 		return (num/den)
 
 	def tanh_deriv(self, x, out):
@@ -196,7 +204,7 @@ class NeuralNetwork:
 			delta1 = delta
 			o = o2
 
-	def train(self, X, y, batch = 64, n_epoch = 1000):
+	def train(self, X, y, batch = 40, n_epoch = 5):
 		#index = np.random.randint(X.shape[0], size = X.shape[0]*0.8)
 		t_size = int(X.shape[0]*0.8)
 		X_train = X[:t_size, :]/255.0
@@ -212,7 +220,7 @@ class NeuralNetwork:
 			input_X = X_train[idx, :]
 			input_y = y_train[idx, :]
 			outputs = self.forwardPass(input_X.T)
-			#print (outputs)
+			# print (outputs)
 			self.backProp(input_y.T, outputs)
 			train_error[i], _ = self.costFunc(input_y.T, outputs, 0, 'none')
 			outputs_test = self.forwardPass(X_test.T)
@@ -302,12 +310,12 @@ if __name__ == '__main__':
 	m = 9 # no of classes
 	lrate = 1e-4
 
-	neurons = [Layer(D, 512, 'sigmoid'), Layer(512,256, 'sigmoid'), Layer(256, 100, 'sigmoid'), Layer(100,m, 'softmax')]
-	NN = NeuralNetwork(4, D, m, cost = 'crossent', layers = neurons, rate = lrate)
+	neurons = [Layer(D, 256, 'sigmoid'),  Layer(256,m, 'softmax')]
+	NN = NeuralNetwork(2, D, m, cost = 'crossent', layers = neurons, rate = lrate)
 
-	labels, images, test_labels, test_images = load_data('C:/Users/Saksham Soni/Documents/Courses/ELL888/EMNIST/emnist-balanced')
+	labels, images, test_labels, test_images = load_data('emnist-balanced.mat')
 
-	NN.train(images, labels, n_epoch=100)
+	NN.train(images, labels, n_epoch=1)
 	test_out = NN.predict(test_images)
 	error = accuracy(test_out, test_labels)
 	print (error,"%")
