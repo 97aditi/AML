@@ -3,7 +3,7 @@ import scipy.io as sio
 import matplotlib.pyplot as plt
 
 class Layer:
-	def __init__(self, units_prev, units, act = 'sigmoid', train = True):
+	def __init__(self, units_prev, units, act = 'sigmoid', alpha = 0, train = True):
 		self.act = act         #weights, bias, z
 		self.inp = np.zeros((units_prev,1))
 		self.units = units
@@ -14,11 +14,11 @@ class Layer:
 		self.gradW = None
 		self.gradb = None
 		self.train = train 
+		self.alpha = alpha
 
 	def forward(self, inp):
 		self.inp = inp
 		self.z = np.matmul(self.weights.T, self.inp) + self.bias
-
 		return self.activate(self.z) 
 
 
@@ -38,7 +38,7 @@ class Layer:
 			self.weights = self.weights - rate*self.gradW - rate*np.multiply(l, np.sign(self.weights))
 		return np.matmul(self.weights, delta), self.inp  # this is delta1, passes onto next layer; NOT delta of the next layer
 
-	def activate(self, x, alpha = 0):
+	def activate(self, x):
 		if(self.act == "sigmoid"):
 			return self.sigmoid(x)
 		if(self.act == 'softmax'):
@@ -46,7 +46,7 @@ class Layer:
 		if(self.act == 'tanh'):
 			return self.tanh(x)
 		if(self.act == 'l_relu'):
-			return self.leaky_relu(x, alpha)
+			return self.leaky_relu(x)
 
 	def act_deriv(self,x, out):
 		if(self.act == 'sigmoid'):
@@ -56,10 +56,10 @@ class Layer:
 		if(self.act == 'tanh'):
 			return self.tanh_deriv(out)
 		if(self.act == 'l_relu'):
-			return self.leaky_relu_deriv(x, alpha)
+			return self.leaky_relu_deriv(x)
 
 	def sigmoid(self, x):
-		return np.divide(1,np.add(1,-np.exp(x)))
+		return np.divide(1,np.add(1,np.exp(-x)))
 
 
 	def sig_deriv(self,x, out):
@@ -83,19 +83,15 @@ class Layer:
 		return (num/den)
 
 	def tanh_deriv(self, x, out):
-		return (1 - (out*out))
+		return (1 - (out**2))
 
-	def leaky_relu(self, x, alpha):
-		if (x >= 0):
-			return x
-		else: 
-			return (self.alpha * x)
+	def leaky_relu(self, x):
+		f = np.vectorize(lambda v: (v if v>0 else v*self.alpha))
+		return f(x)
 
-	def leaky_relu_deriv(self, x, alpha):
-		if (x >= 0):
-			return 1
-		else: 
-			return self.alpha
+	def leaky_relu_deriv(self, x):
+		f = np.vectorize(lambda v: (1 if v>0 else self.alpha))
+		return f(x)
 
 
 class Batchnorm(Layer):
@@ -186,9 +182,9 @@ class NeuralNetwork:
 	def train(self, X, y, batch = 64, n_epoch = 1000):
 		#index = np.random.randint(X.shape[0], size = X.shape[0]*0.8)
 		t_size = int(X.shape[0]*0.8)
-		X_train = X[:t_size, :]
+		X_train = X[:t_size, :]/256
 		y_train = y[:t_size, :]
-		X_test = X[t_size: , :]  
+		X_test = X[t_size: , :]/256  
 		y_test = y[t_size: , :]  
 		
 		train_error = np.zeros(n_epoch)
@@ -287,7 +283,7 @@ if __name__ == '__main__':
 	m = 9 # no of classes
 	alpha = 0.01
 
-	neurons = [Layer(D, 512, 'sigmoid'), Layer(512,256, 'sigmoid'), Layer(256, 100, 'sigmoid'), Layer(100,m, 'softmax')]
+	neurons = [Layer(D, 512, 'l_relu'), Layer(512,256, 'l_relu'), Layer(256, 100, 'l_relu'), Layer(100,m, 'softmax')]
 	NN = NeuralNetwork(3, D, m, layers = neurons, rate = alpha)
 
 	labels, images, test_labels, test_images = load_data('C:/Users/Saksham Soni/Documents/Courses/ELL888/EMNIST/emnist-balanced')
