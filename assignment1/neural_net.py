@@ -27,7 +27,12 @@ class Layer:
 			if (cost=="crossent"):
 				delta = delta1
 			else:
-				delta = np.matmul(self.smax_deriv(self.z, out), delta1)
+				delta = np.zeros(delta1.shape)
+				smax_ = self.smax_deriv(self.z, out)
+				i = 0
+				for s in smax_:
+					delta[:,i] = np.matmul(s, delta1[:,i])
+					i+=1
 		else:
 			delta = np.multiply(delta1, self.act_deriv(self.z, out)) # this is the real delta
 		self.gradb = np.sum(delta,axis = 1).reshape(self.units,1)
@@ -77,7 +82,11 @@ class Layer:
 
 	# TODO: optimisation needed
 	def smax_deriv(self, x, out):
-		d = -np.matmul(out, out.T) + np.diag(np.sum(out, axis =1))
+		d = []
+		for i in range(out.shape[1]):
+			out_ = out[:,i]
+			temp = -np.matmul(out_,out_.T) + np.diag(out_)
+			d.append(temp)
 		return d
 
 	def tanh(self, x):
