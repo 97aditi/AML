@@ -19,9 +19,7 @@ class Layer:
 	def forward(self, inp):
 		self.inp = inp
 		self.z = np.matmul(self.weights.T, self.inp) + self.bias
-		a = self.activate(self.z)
-		print(a)
-		return a 
+		return self.activate(self.z)
 
 
 	def backprop(self, delta1, rate, out, reg="none", l=0, cost = "crossent"): 
@@ -156,7 +154,7 @@ class NeuralNetwork:
 
 	def costFunc(self, trueval, out, l=0, reg="none"): # trueval should be (kxN), N = no. of samples in minibatch, k = no. of output units
 		if (self.cost =="crossent"):
-			error = - np.sum(np.multiply(trueval, np.log(out+1e-20)))
+			error = - (np.sum(np.multiply(trueval, np.log(out+1e-20))))/trueval.shape[1]
 			if(self.layers[self.n_layers-1].act == "softmax"):
 				delta1 = out - trueval
 				#print(delta1)
@@ -204,7 +202,7 @@ class NeuralNetwork:
 			input_X = X_train[idx, :]
 			input_y = y_train[idx, :]
 			outputs = self.forwardPass(input_X.T)
-			print (outputs)
+			#print (outputs)
 			self.backProp(input_y.T, outputs)
 			train_error[i], _ = self.costFunc(input_y.T, outputs, 0, 'none')
 			outputs_test = self.forwardPass(X_test.T)
@@ -299,7 +297,7 @@ if __name__ == '__main__':
 
 	labels, images, test_labels, test_images = load_data('C:/Users/Saksham Soni/Documents/Courses/ELL888/EMNIST/emnist-balanced')
 
-	NN.train(images, labels, n_epoch=1, batch=2)
+	NN.train(images, labels, n_epoch=100)
 	test_out = NN.predict(test_images)
 	error = accuracy(test_out, test_labels)
 	print (error,"%")
