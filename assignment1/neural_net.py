@@ -8,9 +8,8 @@ class Layer:
 		self.inp = np.zeros((units_prev,1))
 		self.units = units
 		self.units_in_prev = units_prev
-		self.weights = np.random.randn(units_prev, units).astype(np.float64)*np.sqrt(1.0/units_prev) 
-		# print("Weights Initial")
-		print(self.weights)  #xavier initialisation                    
+		#xavier initialisation 
+		self.weights = np.random.randn(units_prev, units).astype(np.float64)*np.sqrt(1.0/units_prev)                      
 		self.bias = np.random.randn(units,1)
 		self.z = np.zeros((units, 1)) # z = (w^l)T a^l-1 + b^l
 		self.gradW = None
@@ -106,6 +105,7 @@ class Layer:
 		return (1 - (out**2))
 
 	def leaky_relu(self, x):
+		x = np.clip(x, -500,500)
 		f = np.vectorize(lambda v: (v if v>0 else v*self.alpha))
 		return f(x)
 
@@ -155,13 +155,14 @@ class Batchnorm(Layer):
 
 
 class NeuralNetwork:
-	def __init__(self, n_layers, n_inputs, n_outputs, cost = 'crossent' , layers = None, rate = 0.01):
+	def __init__(self, n_layers, n_inputs, n_outputs, cost = 'crossent' , layers = None, rate = 0.01, reg="none"):
 		self.n_layers = n_layers
 		self.n_inputs = n_inputs
 		self.n_outputs = n_outputs
 		self.layers = layers
 		self.rate = rate
 		self.cost = cost
+		self.reg = reg
              
 	def forwardPass(self, inputarr):
 		out = inputarr # should be D x N
@@ -169,7 +170,8 @@ class NeuralNetwork:
 			out = lr.forward(out)
 		return out
 
-	def costFunc(self, trueval, out, l=0, reg="none"): # trueval should be (kxN), N = no. of samples in minibatch, k = no. of output units
+	def costFunc(self, trueval, out, l=0): 
+		# trueval should be (kxN), N = no. of samples in minibatch, k = no. of output units
 		n = trueval.shape[1]
 		if (self.cost =="crossent"):
 			error = - (np.sum(np.multiply(trueval, np.log(out+1e-20))))/n
@@ -177,17 +179,18 @@ class NeuralNetwork:
 				delta1 = (out - trueval)/n
 				#print(delta1)
 			else: 
-				delta1 =  - np.divide(trueval,out+1e-20)/n # delta1 is NOT delta of the last layer, that is calculated within the layer
+				delta1 =  - np.divide(trueval,out+1e-20)/n 
+				# delta1 is NOT delta of the last layer, that is calculated within the layer
 		elif (self.cost == "mse"):
 			error = np.sum((trueval - out)**2)/(2*n)
 			delta1 = -(trueval-out)/n
 
-		if(reg == 'l2'):
+		if(self.reg == 'l2'):
 			sum = 0
 			for i in range(self.n_layers):
 				sum  = sum+np.sum(np.square(self.layers[i].weights))
 			error = error + l*sum
-		elif(reg =='l1'):
+		elif(self.reg =='l1'):
 			sum = 0
 			for i in range(self.n_layers):
 				sum  = sum+np.sum(np.absolute(self.layers[i].weights))
@@ -198,7 +201,6 @@ class NeuralNetwork:
 	def backProp(self, trueval, out, reg = "none", l=0):
 		_, delta1 = self.costFunc(trueval, out, l, reg) # trueval is a onehot encoded vector
 		o = out
-		# delta1 = trueval # because out cancels when this is multiplied by derv. of sigmoid/softmax, correspondigly modify those functions
 		for lr in reversed(self.layers):
 			delta, o2 = lr.backprop(delta1, self.rate, o, reg, l, cost=self.cost)
 			delta1 = delta
@@ -207,13 +209,19 @@ class NeuralNetwork:
 	def train(self, X, y, batch = 40, n_epoch = 5):
 		#index = np.random.randint(X.shape[0], size = X.shape[0]*0.8)
 		t_size = int(X.shape[0]*0.8)
-		X_train = X[:t_size, :]/255.0
+		X_train = X[:t_size, :]
+		Xu = np.mean(X_train, axis=0)
+		X_train = (X_train-Xu)/255.0
 		y_train = y[:t_size, :]
-		X_test = X[t_size: , :]/255.0  
+		X_test = X[t_size: , :]
+		Xu = np.mean(X_test, axis=0)
+		X_test = (X_test-Xu)/255.0  
 		y_test = y[t_size: , :]  
 		
 		train_error = np.zeros(n_epoch)
 		test_error = np.zeros(n_epoch)
+		train_acc = np.zeros(n_epoch)
+		test_acc = np.zeros(n_epoch)
 		i = 0 
 		while (i < n_epoch):
 			idx = np.random.randint(t_size, size = batch)
@@ -222,9 +230,11 @@ class NeuralNetwork:
 			outputs = self.forwardPass(input_X.T)
 			# print (outputs)
 			self.backProp(input_y.T, outputs)
-			train_error[i], _ = self.costFunc(input_y.T, outputs, 0, 'none')
+			#train_error[i], _ = self.costFunc(input_y.T, outputs, 0, 'none')
+			train_acc[i] = accuracy(input_y, output.T)
 			outputs_test = self.forwardPass(X_test.T)
-			test_error[i], _ = self.costFunc(y_test.T, outputs_test, 0, 'none') 
+			#test_error[i], _ = self.costFunc(y_test.T, outputs_test, 0, 'none') 
+			test_acc[i] = accuracy(y_test, outputs_test.T)
 			i += 1
 			if (i%10==0): print(i, train_error[i-1]) 
 			
@@ -262,7 +272,8 @@ class Dropout(Layer):
 		self.gradW = np.sum(np.matmul(self.inp, self.delta.T), axis=1)
 		self.bias = self.bias - rate*self.gradb
 		self.weights = self.weights - rate*self.gradW
-		return np.matmul(self.weights, delta), inp  # this is delta1, passes onto next layer; NOT delta of the next layer
+		return np.matmul(self.weights, delta), inp  
+		# this is delta1, passes onto next layer; NOT delta of the next layer
 
 def make_onehot(y):
 	yoh = np.zeros((y.shape[0],9))
@@ -273,8 +284,8 @@ def make_onehot(y):
 
 def load_data(path):
 	data = sio.loadmat(path)
-	total_training_images = data['dataset'][0][0][0][0][0][0][:]
-	total_training_labels = data['dataset'][0][0][0][0][0][1][:]
+	total_training_images = data['dataset'][0][0][0][0][0][0][:].astype(np.float32)
+	total_training_labels = data['dataset'][0][0][0][0][0][1][:].astype(np.float32)
 	classes = [10, 13, 16, 17, 18, 19, 20, 23, 24]
 	ix = np.array([], dtype=np.int64)
 	for l in classes:
@@ -308,7 +319,7 @@ if __name__ == '__main__':
 	## Hyper-parameters
 	D = 784 # input dimension
 	m = 9 # no of classes
-	lrate = 1e-4
+	lrate = 1e-3
 
 	neurons = [Layer(D, 256, 'sigmoid'),  Layer(256,m, 'softmax')]
 	NN = NeuralNetwork(2, D, m, cost = 'crossent', layers = neurons, rate = lrate)
@@ -316,6 +327,7 @@ if __name__ == '__main__':
 	labels, images, test_labels, test_images = load_data('emnist-balanced.mat')
 
 	NN.train(images, labels, n_epoch=1)
+
 	test_out = NN.predict(test_images)
 	error = accuracy(test_out, test_labels)
 	print (error,"%")
