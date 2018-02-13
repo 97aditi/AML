@@ -8,7 +8,7 @@ class Layer:
 		self.inp = np.zeros((units_prev,1))
 		self.units = units
 		self.units_in_prev = units_prev
-		self.weights = np.random.randn(units_prev, units).astype(np.float64)*np.sqrt(1.0/units_prev)   #Try xavier initialisation                    
+		self.weights = np.random.randn(units_prev, units).astype(np.float64)*np.sqrt(1.0/units_prev)   #xavier initialisation                    
 		self.bias = np.random.randn(units,1)
 		self.z = np.zeros((units, 1)) # z = (w^l)T a^l-1 + b^l
 		self.gradW = None
@@ -153,16 +153,17 @@ class NeuralNetwork:
 		return out
 
 	def costFunc(self, trueval, out, l=0, reg="none"): # trueval should be (kxN), N = no. of samples in minibatch, k = no. of output units
+		n = trueval.shape[1]
 		if (self.cost =="crossent"):
-			error = - (np.sum(np.multiply(trueval, np.log(out+1e-20))))/trueval.shape[1]
+			error = - (np.sum(np.multiply(trueval, np.log(out+1e-20))))/n
 			if(self.layers[self.n_layers-1].act == "softmax"):
-				delta1 = out - trueval
+				delta1 = (out - trueval)/n
 				#print(delta1)
 			else: 
-				delta1 =  - np.divide(trueval,out+1e-20) # delta1 is NOT delta of the last layer, that is calculated within the layer
+				delta1 =  - np.divide(trueval,out+1e-20)/n # delta1 is NOT delta of the last layer, that is calculated within the layer
 		elif (self.cost == "mse"):
-			error = np.sum((trueval - out)**2)/(2*trueval.shape[1])
-			delta1 = -(trueval-out)/trueval.shape[1]
+			error = np.sum((trueval - out)**2)/(2*n)
+			delta1 = -(trueval-out)/n
 
 		if(reg == 'l2'):
 			sum = 0
