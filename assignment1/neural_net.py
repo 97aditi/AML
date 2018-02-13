@@ -219,8 +219,8 @@ class NeuralNetwork:
 		
 		train_error = np.zeros(n_epoch)
 		test_error = np.zeros(n_epoch)
-		train_acc = np.zeros(n_epoch)
-		test_acc = np.zeros(n_epoch)
+		#train_acc = np.zeros(n_epoch)
+		#test_acc = np.zeros(n_epoch)
 		i = 0 
 		while (i < n_epoch):
 			idx = np.random.randint(t_size, size = batch)
@@ -229,11 +229,11 @@ class NeuralNetwork:
 			outputs = self.forwardPass(input_X.T)
 			# print (outputs)
 			self.backProp(input_y.T, outputs, reg=reg, l=l)
-			#train_error[i], _ = self.costFunc(input_y.T, outputs, 0, 'none')
-			train_acc[i] = accuracy(input_y, outputs.T)
+			train_error[i], _ = self.costFunc(input_y.T, outputs, 0, 'none')
+			#train_acc[i] = accuracy(input_y, outputs.T)
 			outputs_test = self.forwardPass(X_test.T)
-			#test_error[i], _ = self.costFunc(y_test.T, outputs_test, 0, 'none') 
-			test_acc[i] = accuracy(y_test, outputs_test.T)
+			test_error[i], _ = self.costFunc(y_test.T, outputs_test, 0, 'none') 
+			#test_acc[i] = accuracy(y_test, outputs_test.T)
 			i += 1
 			if (i%10==0): print(i, train_error[i-1]) 
 			
@@ -284,7 +284,7 @@ def make_onehot(y):
 def load_data(path):
 	data = sio.loadmat(path)
 	total_training_images = data['dataset'][0][0][0][0][0][0][:].astype(np.float32)
-	total_training_labels = data['dataset'][0][0][0][0][0][1][:].astype(np.float32)
+	total_training_labels = data['dataset'][0][0][0][0][0][1][:]
 	classes = [10, 13, 16, 17, 18, 19, 20, 23, 24]
 	ix = np.array([], dtype=np.int64)
 	for l in classes:
@@ -295,7 +295,7 @@ def load_data(path):
 	#images = total_training_images[ix].reshape(train_size, 28, 28, 1)
 	images = total_training_images[ix]
 
-	total_testing_images = data['dataset'][0][0][1][0][0][0][:]
+	total_testing_images = data['dataset'][0][0][1][0][0][0][:].astype(np.float32)
 	total_testing_labels = data['dataset'][0][0][1][0][0][1][:]
 	ix = np.array([], dtype=np.int64)
 	for l in classes:
@@ -311,7 +311,7 @@ def accuracy(result, truth):
 	ix = res == tru
 	correct = np.sum(ix)
 	total = res.shape[0]
-	percent_acc = (correct/total)*100
+	percent_acc = ((correct*1.0)/(total*1.0))*100.0
 	return percent_acc
 
 if __name__ == '__main__':		
@@ -326,7 +326,7 @@ if __name__ == '__main__':
 
 	labels, images, test_labels, test_images = load_data('assignment1/emnist-balanced')
 
-	NN.train(images, labels, n_epoch=1000, batch=16, reg="l2", l = 1)
+	NN.train(images, labels, n_epoch=1000, batch=32, reg="l2", l=0.1)
 
 	test_out = NN.predict(test_images)
 	error = accuracy(test_out, test_labels)
