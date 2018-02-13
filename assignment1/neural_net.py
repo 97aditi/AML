@@ -115,36 +115,41 @@ class Batchnorm(Layer):
 		self.units = units_prev
 		self.units_in_prev = units_prev
 		self.gamma = np.random.randn(self.units,1);
-		self.beta = np.random.randn();
+		self.beta = np.random.randn(self.units,1);
 		self.z = np.zeros((self.units, 1)) # z = (w^l)T a^l-1 + b^l
 		self.gradbeta = None
 		self.gradgamma = None
-		self.mu = np.mean(self.inp, axis=0)
 		self.epsilon = 1e-8
-		self.var = np.var(self.inp, axis=0) + self.epsilon
+		
 
 	def forward(self,inp):
+		self.inp=inp
+		self.mu = np.mean(self.inp, axis=0)
+		self.var = np.var(self.inp, axis=0) + self.epsilon
 		self.x_cap = np.divide(self.inp-self.mu, np.sqrt(self.var))
-		self.z = self.gamma*self.x_cap + self.beta
+		self.z = np.multiply(self.gamma,self.x_cap) + self.beta
 		return self.z
 
-	def deriv(Z, delta1):
+	def deriv(self,Z, delta1):
 		m,D = Z.shape
 		Xmean = self.inp - self.mu;
-		inv_var = np.inverse(np.sqrt(self.var))
-		gradXcap = delta1*self.gamma
-		gradvar = np.sum(gradXcap*Xmean*(-0.5)*inv_var**3, axis=0)
-		gradmu = np.sum(gradXcap*(-1)*inv_var, axis=0)+ np.mean(-2*Xmean, axis=0)
-		gradX = gradXnorm*inv_var+gradvar*2*Xmean/m+gradmu/m
+		inv_var = 1.0/(np.sqrt(self.var))
+		gradXcap = np.multiply(self.gamma, delta1)
+		
+		gradvar = np.sum(gradXcap*Xmean*(-0.5)*(inv_var**3), axis=1).reshape(self.units,1)
+		print(gradvar.shape)
+		gradmu = np.sum(-gradXcap*inv_var, axis=1)+ np.mean(-2*Xmean, axis=1)
+		gradmu = gradmu.reshape(self.units, 1)
+		gradX = gradXcap*inv_var+gradvar*2*Xmean/m+gradmu/m
 		return gradX
 
-	def backprop(self, delta1, rate, out,reg = "none", l=0, cost = "crossent"): 
-		delta = deriv(self.z, delta1) # this is the real delta
-		self.gradbeta = np.sum(delta,axis = 1)
-		self.gradgamma = np.sum(np.matmul(x_cap, self.delta.T), axis=1)
+	def backprop(self, delta1, rate, out, reg="none", l=0, cost = "crossent"): 
+		delta = self.deriv(self.z, delta1) # this is the real delta
+		self.gradbeta = np.sum(delta,axis = 1).reshape(self.units,1)
+		self.gradgamma = np.sum(np.multiply(self.x_cap,delta), axis=1).reshape(self.units,1)
 		self.beta = self.beta - rate*self.gradbeta
 		self.gamma = self.gamma - rate*self.gradgamma
-		return np.matmul(self.weights, delta), inp
+		return np.multiply(self.gamma, delta), self.inp
 
 
 
