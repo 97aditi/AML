@@ -22,9 +22,12 @@ class Layer:
 		return self.activate(self.z) 
 
 
-	def backprop(self, delta1, rate, out, reg="none", l=0): 
+	def backprop(self, delta1, rate, out, reg="none", l=0, cost = "crossent"): 
 		if(self.act == 'softmax'):
-			delta = np.matmul(self.smax_deriv(self.z, out), delta1)
+			if (cost=="crossent"):
+				delta = delta1
+			else:
+				delta = np.matmul(self.smax_deriv(self.z, out), delta1)
 		else:
 			delta = np.multiply(delta1, self.act_deriv(self.z, out)) # this is the real delta
 		self.gradb = np.sum(delta,axis = 1).reshape(self.units,1)
@@ -135,8 +138,8 @@ class Batchnorm(Layer):
 
 
 class NeuralNetwork:
-	def __init__(self, hidlayers, n_inputs, n_outputs, cost = 'crossent' , layers = None, rate = 0.01):
-		self.hidlayers = hidlayers
+	def __init__(self, n_layers, n_inputs, n_outputs, cost = 'crossent' , layers = None, rate = 0.01):
+		self.n_layers = n_layers
 		self.n_inputs = n_inputs
 		self.n_outputs = n_outputs
 		self.layers = layers
@@ -151,20 +154,23 @@ class NeuralNetwork:
 
 	def costFunc(self, trueval, out, l=0, reg="none"): # trueval should be (kxN), N = no. of samples in minibatch, k = no. of output units
 		if (self.cost =="crossent"):
-			error = - np.sum(np.multiply(trueval, np.log(out)))
-			delta1 =  - np.divide(trueval,out) # delta1 is NOT delta of the last layer, that is calculated within the layer
+			error = - np.sum(np.multiply(trueval, np.log(out+1e-20)))
+			if(self.layers[self.n_layers-1].act == "softmax"):
+				delta1 = out - trueval
+			else: 
+				delta1 =  - np.divide(trueval,out+1e-20) # delta1 is NOT delta of the last layer, that is calculated within the layer
 		elif (self.cost == "mse"):
 			error = np.sum((trueval - out)**2)/(2*trueval.shape[1])
 			delta1 = -(trueval-out)/trueval.shape[1]
 
 		if(reg == 'l2'):
 			sum = 0
-			for i in range(hidlayers):
+			for i in range(self.n_layers):
 				sum  = sum+np.sum(np.square(self.layers[i].weights))
 			error = error + l*sum
 		elif(reg =='l1'):
 			sum = 0
-			for i in range(hidlayers):
+			for i in range(self.n_layers):
 				sum  = sum+np.sum(np.absolute(self.layers[i].weights))
 			error = error + l*sum
 
@@ -175,16 +181,16 @@ class NeuralNetwork:
 		o = out
 		# delta1 = trueval # because out cancels when this is multiplied by derv. of sigmoid/softmax, correspondigly modify those functions
 		for lr in reversed(self.layers):
-			delta, o2 = lr.backprop(delta1, self.rate, o, reg, l)
+			delta, o2 = lr.backprop(delta1, self.rate, o, reg, l, cost=self.cost)
 			delta1 = delta
 			o = o2
 
 	def train(self, X, y, batch = 64, n_epoch = 1000):
 		#index = np.random.randint(X.shape[0], size = X.shape[0]*0.8)
 		t_size = int(X.shape[0]*0.8)
-		X_train = X[:t_size, :]/256
+		X_train = X[:t_size, :]/256.0
 		y_train = y[:t_size, :]
-		X_test = X[t_size: , :]/256  
+		X_test = X[t_size: , :]/256.0  
 		y_test = y[t_size: , :]  
 		
 		train_error = np.zeros(n_epoch)
@@ -199,7 +205,8 @@ class NeuralNetwork:
 			train_error[i], _ = self.costFunc(input_y.T, outputs, 0, 'none')
 			outputs_test = self.forwardPass(X_test.T)
 			test_error[i], _ = self.costFunc(y_test.T, outputs_test, 0, 'none') 
-			i += 1 
+			i += 1
+			if (i%10==0): print(i, train_error[i-1]) 
 			
 		plt.plot(np.arange(1,n_epoch+1), train_error, label='training error')
 		plt.plot(np.arange(1,n_epoch+1), test_error, label='validation error')
@@ -281,14 +288,14 @@ if __name__ == '__main__':
 	## Hyper-parameters
 	D = 784 # input dimension
 	m = 9 # no of classes
-	alpha = 0.01
+	lrate = 1e-4
 
-	neurons = [Layer(D, 512, 'l_relu'), Layer(512,256, 'l_relu'), Layer(256, 100, 'l_relu'), Layer(100,m, 'softmax')]
-	NN = NeuralNetwork(3, D, m, layers = neurons, rate = alpha)
+	neurons = [Layer(D, 512, 'l_relu', alpha=0.01), Layer(512,256, 'l_relu', alpha=0.01), Layer(256, 100, 'l_relu', alpha=0.01), Layer(100,m, 'softmax')]
+	NN = NeuralNetwork(4, D, m, cost = 'crossent', layers = neurons, rate = lrate)
 
 	labels, images, test_labels, test_images = load_data('C:/Users/Saksham Soni/Documents/Courses/ELL888/EMNIST/emnist-balanced')
 
-	NN.train(images, labels)
+	NN.train(images, labels, n_epoch=100)
 	test_out = NN.predict(test_images)
 	error = accuracy(test_out, test_labels)
 	print (error,"%")
