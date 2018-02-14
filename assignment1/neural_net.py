@@ -299,7 +299,8 @@ def load_data(path):
 	data = loadmat(path)
 	total_training_images = data['dataset'][0][0][0][0][0][0][:].astype(np.float32)
 	total_training_labels = data['dataset'][0][0][0][0][0][1][:]
-	classes = [10, 13, 16, 17, 18, 19, 20, 23, 24]
+	classes = [10, 13, 16, 17, 18, 19, 20, 23, 24]  
+	#A,D,G,H,I,J,K,N,O
 	ix = np.array([], dtype=np.int64)
 	for l in classes:
 		ix = np.append(ix, np.where(total_training_labels==l)[0])
@@ -322,6 +323,7 @@ def load_data(path):
 def accuracy(result, truth):
 	res = np.argmax(result,1)
 	tru = np.argmax(truth, 1)
+	print(tru.shape)
 	ix = res == tru
 	correct = np.sum(ix)
 	total = res.shape[0]
@@ -337,9 +339,24 @@ def confusion_matrix(result, truth, n_classes):
 		for j in range(n_classes):
 			iy = res==j
 			correct=np.multiply(ix,iy)
-			confuse[i][j]=np.sum(correct)
+			confuse[i][j]=np.around(np.sum(correct)/400.0, decimals=2)
 
-	print confuse
+	fig = plt.figure()
+	ax = fig.add_subplot(111)
+	ax.imshow(np.array(confuse), cmap=plt.cm.jet, interpolation='nearest')
+	width, height = confuse.shape
+	for x in xrange(width):
+		for y in xrange(height):
+			ax.annotate(str(confuse[x][y]), xy=(y, x),horizontalalignment='center',verticalalignment='center')
+	ax.set_xlabel('Predicted Label', fontsize=12)
+	ax.set_xticks([0,1,2,3,4,5,6,7,8])
+	ax.set_xticklabels(['A','D','G','H','I','J','K','N','O'],verticalalignment='top')
+	ax.set_ylabel('True Label', fontsize=12, rotation=90)
+	ax.set_yticks([0,1,2,3,4,5,6,7,8])
+	ax.set_yticklabels(['A','D','G','H','I','J','K','N','O'],rotation=90)
+	plt.show()
+
+
 
 	
 if __name__ == '__main__':		
@@ -348,11 +365,15 @@ if __name__ == '__main__':
 	m = 9 # no of classes
 	lrate = 0.01
 
-	neurons = [Layer(D, 512, 'sigmoid'), Layer(512, 100, 'sigmoid'), Layer(100 ,m, 'softmax')]
+	neurons = [Layer(D, 256, 'l_relu'), Layer(256, 100, 'l_relu'), Layer(100 ,m, 'softmax')]
 	NN = NeuralNetwork(3, D, m, cost = 'crossent', layers = neurons, rate = lrate)
 	labels, images, test_labels, test_images = load_data('emnist-balanced.mat')
-	NN.train(images, labels, n_epoch = 100, batch= 64, reg="l2", l=0.01)
+	NN.train(images, labels, n_epoch = 10, batch= 64, reg="l2", l=0.01)
 	test_out = NN.predict(test_images)
 	error = accuracy(test_out, test_labels)
 	print (error,"%")
 	confusion_matrix(test_out, test_labels, m)
+	# wt=np.zeros(0)
+	# for i in range(NN.n_layers):
+	# 	wt=np.append(wt,NN.layers[i].weights.reshape((NN.layers[i].units)*(NN.layers[i].))
+	# print(wt.shape)
