@@ -145,8 +145,8 @@ class Batchnorm(Layer):
 
 	def backprop(self, delta1, rate, out, reg="none", l=0, cost = "crossent"): 
 		delta = self.deriv(self.z, delta1) # this is the real delta
-		self.gradbeta = np.sum(delta,axis = 1).reshape(self.units,1)
-		self.gradgamma = np.sum(np.multiply(self.x_cap,delta), axis=1).reshape(self.units,1)
+		self.gradbeta = np.sum(delta1,axis = 1).reshape(self.units,1)
+		self.gradgamma = np.sum(np.multiply(self.x_cap,delta1), axis=1).reshape(self.units,1)
 		self.beta = self.beta - rate*self.gradbeta
 		self.gamma = self.gamma - rate*self.gradgamma
 		return np.multiply(self.gamma, delta), self.inp
@@ -337,10 +337,10 @@ if __name__ == '__main__':
 	D = 784 # input dimension
 	m = 9 # no of classes
 	lrate = 1e-3
-	neurons = [Layer(D, 256, 'sigmoid'), Batchnorm(256), Layer(256,m, 'softmax')]
+	neurons = [Layer(D, 256, 'sigmoid'), Batchnorm(256), Layer(256 ,m, 'softmax')]
 	NN = NeuralNetwork(2, D, m, cost = 'crossent', layers = neurons, rate = lrate)
 	labels, images, test_labels, test_images = load_data('emnist-balanced.mat')
-	NN.train(images, labels, n_epoch=200)
+	NN.train(images, labels, n_epoch=1)
 	test_out = NN.predict(test_images)
 	error = accuracy(test_out, test_labels)
 	print (error,"%")
