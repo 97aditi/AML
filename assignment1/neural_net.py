@@ -17,7 +17,7 @@ class Layer:
 		self.train = train 
 		self.alpha = alpha
 
-	def forward(self, inp):
+	def forward(self, inp, train= True):
 		self.inp = inp
 		self.z = np.matmul(self.weights.T, self.inp) + self.bias
 		return self.activate(self.z)
@@ -122,7 +122,7 @@ class Batchnorm(Layer):
 		self.epsilon = 1e-5
 		
 
-	def forward(self,inp):
+	def forward(self,inp, train = True):
 		self.inp=inp
 		self.mu = np.mean(self.inp, axis=1).reshape(self.units,1)
 		self.var = np.var(self.inp, axis=1) + self.epsilon
@@ -162,10 +162,10 @@ class NeuralNetwork:
 		self.rate = rate
 		self.cost = cost
              
-	def forwardPass(self, inputarr):
+	def forwardPass(self, inputarr, train = True):
 		out = inputarr # should be D x N
 		for lr in self.layers:
-			out = lr.forward(out)
+			out = lr.forward(out, train= train)
 		return out
 
 	def costFunc(self, trueval, out, l=0, reg = "none"): 
@@ -224,12 +224,12 @@ class NeuralNetwork:
 			idx = np.random.randint(t_size, size = batch)
 			input_X = X_train[idx, :]
 			input_y = y_train[idx, :]
-			outputs = self.forwardPass(input_X.T)
+			outputs = self.forwardPass(input_X.T, train = True)
 			# print (outputs)
 			self.backProp(input_y.T, outputs, reg=reg, l=l)
 			train_error[i], _ = self.costFunc(input_y.T, outputs, 0, 'none')
 			#train_acc[i] = accuracy(input_y, outputs.T)
-			outputs_test = self.forwardPass(X_test.T)
+			outputs_test = self.forwardPass(X_test.T, train = False)
 			test_error[i], _ = self.costFunc(y_test.T, outputs_test, 0, 'none') 
 			#test_acc[i] = accuracy(y_test, outputs_test.T)
 			i += 1
@@ -246,12 +246,12 @@ class NeuralNetwork:
 		plt.show()
 
 	def predict(self, inputarr):
-		out = self.forwardPass(inputarr.T)
+		out = self.forwardPass(inputarr.T, train = False)
 		return out.T
 
 	
 class Dropout(Layer):
-	def __init__(self, prob, units_prev, units, act = 'sigmoid', alpha = 0, train = True):
+	def __init__(self, prob, units_prev, units, act = 'sigmoid', alpha = 0):
 		self.prob = prob
 		self.drop = np.zeros((units, 1))
 		self.act = act         #weights, bias, z
@@ -262,22 +262,25 @@ class Dropout(Layer):
 		self.bias = np.random.randn(units,1)
 		self.z = np.zeros((units, 1)) # z = (w^l)T a^l-1 + b^l
 		self.gradW = None
-		self.gradb = None
-		self.train = train 
+		self.gradb = None 
 		self.alpha = alpha
 
-	def forward(self, inp):
+	def forward(self, inp, train = True):
 		self.inp = inp
 		#print (self.bias.shape)
 		self.z = np.matmul(self.weights.T, self.inp) + self.bias
+		#print (train)
 
-
-		if (self.train == True):
+		if (train == True):
 			self.drop = np.random.binomial(1, self.prob, size = self.units)
+			print (np.count_nonzero(self.drop))
 			self.drop = self.drop.reshape(self.drop.shape[0],1)
-			#print (np.repeat(self.drop, 32, axis = 1).shape)
-			return np.multiply(self.activate(self.z), np.repeat(self.drop, self.z.shape[1], axis = 1))
+			#print (np.multiply(self.activate(self.z), self.drop))
+			#print (np.count_nonzero(np.multiply(self.activate(self.z), self.drop)))
+			return np.multiply(self.activate(self.z), self.drop)
 		else:
+			#print (self.activate(self.z) * self.prob)
+			#print (np.count_nonzero(self.activate(self.z) * self.prob))
 			return self.activate(self.z) * self.prob
 
 	def backprop(self, delta1, rate, out, reg = "none", l = 0, cost = 'crossent'): 
@@ -338,10 +341,10 @@ if __name__ == '__main__':
 	m = 9 # no of classes
 	lrate = 1e-3
 
-	neurons = [Layer(D, 256, 'sigmoid'), Batchnorm(256), Layer(256 ,m, 'softmax')]
-	NN = NeuralNetwork(2, D, m, cost = 'crossent', layers = neurons, rate = lrate)
+	neurons = [Dropout(0.5, D, 256, 'sigmoid'), Dropout(0.5, 256, 128, 'sigmoid'), Layer(128 ,m, 'softmax')]
+	NN = NeuralNetwork(3, D, m, cost = 'crossent', layers = neurons, rate = lrate)
 	labels, images, test_labels, test_images = load_data('emnist-balanced.mat')
-	NN.train(images, labels, n_epoch=1)
+	NN.train(images, labels, n_epoch = 1)
 	test_out = NN.predict(test_images)
 	error = accuracy(test_out, test_labels)
 	print (error,"%")
