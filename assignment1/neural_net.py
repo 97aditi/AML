@@ -203,7 +203,7 @@ class NeuralNetwork:
 			delta1 = delta
 			o = o2
 
-	def train(self, X, y, batch = 40, n_epoch = 5, l = 0, reg = "none"):
+	def train(self, X, y, batch = 32, n_epoch = 5, l = 0, reg = "none"):
 		#index = np.random.randint(X.shape[0], size = X.shape[0]*0.8)
 		t_size = int(X.shape[0]*0.8)
 		X_train = X[:t_size, :]
@@ -235,7 +235,7 @@ class NeuralNetwork:
 			i += 1
 			# print("weights") 
 			# initial=self.layers[0].weights[0,:1]
-		if (i%10==0): print(i, train_error[i-1]) 
+			if (i%10==0): print(i, train_error[i-1]) 
 		# print(initial-self.layers[0].weights[0,:])
 		# print(np.count_nonzero(initial-self.layers[0].weights[0,:]))
 		plt.plot(np.arange(1,n_epoch+1), train_error, label='training error')
@@ -337,10 +337,10 @@ if __name__ == '__main__':
 	D = 784 # input dimension
 	m = 9 # no of classes
 	lrate = 1e-3
-	neurons = [Layer(D, 256, 'sigmoid'), Batchnorm(256), Layer(256,m, 'softmax')]
-	NN = NeuralNetwork(2, D, m, cost = 'crossent', layers = neurons, rate = lrate)
-	labels, images, test_labels, test_images = load_data('emnist-balanced.mat')
-	NN.train(images, labels, n_epoch=200)
+	neurons = [Layer(D, 512, 'sigmoid'), Batchnorm(512), Dropout(0.5, 512, 128, 'sigmoid'), Layer(128,m, 'softmax')]
+	NN = NeuralNetwork(3, D, m, cost = 'crossent', layers = neurons, rate = lrate)
+	labels, images, test_labels, test_images = load_data('assignment1/emnist-balanced.mat')
+	NN.train(images, labels, n_epoch=200, batch=20, reg="l2", l=0.1)
 	test_out = NN.predict(test_images)
 	error = accuracy(test_out, test_labels)
 	print (error,"%")
