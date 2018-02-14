@@ -242,6 +242,9 @@ class NeuralNetwork:
 			plt.ylabel('error')
 			plt.legend()
 			plt.show()
+		if(reg=='l2'):
+			plt.plot(np.histogram(self.layers.weights))
+
 
 	def predict(self, inputarr):
 		out = self.forwardPass(inputarr.T, train = False)
@@ -325,16 +328,31 @@ def accuracy(result, truth):
 	percent_acc = (correct*(1.0)/total)*100
 	return percent_acc
 
+def confusion_matrix(result, truth, n_classes):
+	res = np.argmax(result,1)
+	tru = np.argmax(truth, 1)
+	confuse=np.zeros((n_classes, n_classes))
+	for i in range(n_classes):
+		ix = tru==i
+		for j in range(n_classes):
+			iy = res==j
+			correct=np.multiply(ix,iy)
+			confuse[i][j]=np.sum(correct)
+
+	print confuse
+
+	
 if __name__ == '__main__':		
 	## Hyper-parameters
 	D = 784 # input dimension
 	m = 9 # no of classes
-	lrate = 1e-3
+	lrate = 0.01
 
-	neurons = [Layer(D ,m, 'softmax')]
-	NN = NeuralNetwork(1, D, m, cost = 'crossent', layers = neurons, rate = lrate)
-	labels, images, test_labels, test_images = load_data('assignment1/emnist-balanced.mat')
-	NN.train(images, labels, n_epoch = 10000, batch= 30, reg="l2", l=0.1)
+	neurons = [Layer(D, 512, 'sigmoid'), Layer(512, 100, 'sigmoid'), Layer(100 ,m, 'softmax')]
+	NN = NeuralNetwork(3, D, m, cost = 'crossent', layers = neurons, rate = lrate)
+	labels, images, test_labels, test_images = load_data('emnist-balanced.mat')
+	NN.train(images, labels, n_epoch = 100, batch= 64, reg="l2", l=0.01)
 	test_out = NN.predict(test_images)
 	error = accuracy(test_out, test_labels)
 	print (error,"%")
+	confusion_matrix(test_out, test_labels, m)
