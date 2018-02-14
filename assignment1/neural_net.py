@@ -119,13 +119,14 @@ class Batchnorm(Layer):
 		self.z = np.zeros((self.units, 1)) # z = (w^l)T a^l-1 + b^l
 		self.gradbeta = None
 		self.gradgamma = None
-		self.epsilon = 1e-8
+		self.epsilon = 1e-5
 		
 
 	def forward(self,inp):
 		self.inp=inp
-		self.mu = np.mean(self.inp, axis=0)
-		self.var = np.var(self.inp, axis=0) + self.epsilon
+		self.mu = np.mean(self.inp, axis=1).reshape(self.units,1)
+		self.var = np.var(self.inp, axis=1) + self.epsilon
+		self.var=self.var.reshape(self.units,1)
 		self.x_cap = np.divide(self.inp-self.mu, np.sqrt(self.var))
 		self.z = np.multiply(self.gamma,self.x_cap) + self.beta
 		return self.z
@@ -135,12 +136,11 @@ class Batchnorm(Layer):
 		Xmean = self.inp - self.mu;
 		inv_var = 1.0/(np.sqrt(self.var))
 		gradXcap = np.multiply(self.gamma, delta1)
-		
 		gradvar = np.sum(gradXcap*Xmean*(-0.5)*(inv_var**3), axis=1).reshape(self.units,1)
-		print(gradvar.shape)
 		gradmu = np.sum(-gradXcap*inv_var, axis=1)+ np.mean(-2*Xmean, axis=1)
 		gradmu = gradmu.reshape(self.units, 1)
 		gradX = gradXcap*inv_var+gradvar*2*Xmean/m+gradmu/m
+		gradX=np.clip(gradX, -500, 500)
 		return gradX
 
 	def backprop(self, delta1, rate, out, reg="none", l=0, cost = "crossent"): 
@@ -235,15 +235,15 @@ class NeuralNetwork:
 			i += 1
 			# print("weights") 
 			# initial=self.layers[0].weights[0,:1]
-			if (i%10==0): print(i, train_error[i-1]) 
-		print(initial-self.layers[0].weights[0,:])
-		print(np.count_nonzero(initial-self.layers[0].weights[0,:]))
-		# plt.plot(np.arange(1,n_epoch+1), train_error, label='training error')
-		# plt.plot(np.arange(1,n_epoch+1), test_error, label='validation error')
-		# plt.xlabel('no. of epochs')
-		# plt.ylabel('error')
-		# plt.legend()
-		# plt.show()
+		if (i%10==0): print(i, train_error[i-1]) 
+		# print(initial-self.layers[0].weights[0,:])
+		# print(np.count_nonzero(initial-self.layers[0].weights[0,:]))
+		plt.plot(np.arange(1,n_epoch+1), train_error, label='training error')
+		plt.plot(np.arange(1,n_epoch+1), test_error, label='validation error')
+		plt.xlabel('no. of epochs')
+		plt.ylabel('error')
+		plt.legend()
+		plt.show()
 
 	def predict(self, inputarr):
 		out = self.forwardPass(inputarr.T)
@@ -325,7 +325,7 @@ if __name__ == '__main__':
 
 
 	labels, images, test_labels, test_images = load_data('emnist-balanced.mat')
-	NN.train(images, labels, n_epoch=2000)
+	NN.train(images, labels, n_epoch=200)
 	test_out = NN.predict(test_images)
 	error = accuracy(test_out, test_labels)
 	print (error,"%")
