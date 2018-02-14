@@ -242,8 +242,8 @@ class NeuralNetwork:
 			plt.ylabel('error')
 			plt.legend()
 			plt.show()
-		if(reg=='l2'):
-			plt.plot(np.histogram(self.layers.weights))
+		# if(reg=='l2'):
+		# 	plt.plot(np.histogram(self.layers.weights))
 
 
 	def predict(self, inputarr):
