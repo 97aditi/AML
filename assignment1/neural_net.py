@@ -199,7 +199,7 @@ class NeuralNetwork:
 		_, delta1 = self.costFunc(trueval, out, l, reg) # trueval is a onehot encoded vector
 		o = out
 		for lr in reversed(self.layers):
-			delta, o2 = lr.backprop(delta1, self.rate, o, reg=reg, l=l, cost=self.cost)
+			delta, o2 = lr.backprop(delta1, self.rate, o, reg = reg, l = l, cost = self.cost)
 			delta1 = delta
 			o = o2
 
@@ -251,28 +251,45 @@ class NeuralNetwork:
 
 	
 class Dropout(Layer):
-	def __init__(self, prob):
+	def __init__(self, prob, units_prev, units, act = 'sigmoid', alpha = 0, train = True):
 		self.prob = prob
 		self.drop = np.zeros((units, 1))
+		self.act = act         #weights, bias, z
+		self.inp = np.zeros((units_prev,1))
+		self.units = units
+		self.units_in_prev = units_prev
+		self.weights = np.random.randn(units_prev, units).astype(np.float64)*np.sqrt(1.0/units_prev)                      
+		self.bias = np.random.randn(units,1)
+		self.z = np.zeros((units, 1)) # z = (w^l)T a^l-1 + b^l
+		self.gradW = None
+		self.gradb = None
+		self.train = train 
+		self.alpha = alpha
 
 	def forward(self, inp):
 		self.inp = inp
+		#print (self.bias.shape)
 		self.z = np.matmul(self.weights.T, self.inp) + self.bias
 
-		if (train == True):
-			self.drop = np.random.binomial(1, prob, size = units.shape)
-			return np.multiply(self.activate(self.z), drop)
-		else:
-			return self.activate(self.z) * prob
 
-	def backprop(self, delta1, rate, out): 
+		if (self.train == True):
+			self.drop = np.random.binomial(1, self.prob, size = self.units)
+			self.drop = self.drop.reshape(self.drop.shape[0],1)
+			#print (np.repeat(self.drop, 32, axis = 1).shape)
+			return np.multiply(self.activate(self.z), np.repeat(self.drop, self.z.shape[1], axis = 1))
+		else:
+			return self.activate(self.z) * self.prob
+
+	def backprop(self, delta1, rate, out, reg = "none", l = 0, cost = 'crossent'): 
 		delta = np.multiply(delta1, self.act_deriv(self.z, out)) # this is the real delta
-		delta = np.multiply(delta, self.drop) 
-		self.gradb = np.sum(delta,axis = 1)
-		self.gradW = np.sum(np.matmul(self.inp, self.delta.T), axis=1)
+		delta = np.multiply(delta, self.drop)
+		self.gradb = np.sum(delta,axis = 1).reshape(self.units,1)
+		#print (self.gradb.shape)
+		self.gradW = np.matmul(self.inp, delta.T)
 		self.bias = self.bias - rate*self.gradb
+		
 		self.weights = self.weights - rate*self.gradW
-		return np.matmul(self.weights, delta), inp  
+		return np.matmul(self.weights, delta), self.inp  
 		# this is delta1, passes onto next layer; NOT delta of the next layer
 
 def make_onehot(y):
@@ -322,8 +339,6 @@ if __name__ == '__main__':
 	lrate = 1e-3
 	neurons = [Layer(D, 256, 'sigmoid'), Batchnorm(256), Layer(256,m, 'softmax')]
 	NN = NeuralNetwork(2, D, m, cost = 'crossent', layers = neurons, rate = lrate)
-
-
 	labels, images, test_labels, test_images = load_data('emnist-balanced.mat')
 	NN.train(images, labels, n_epoch=200)
 	test_out = NN.predict(test_images)
