@@ -204,19 +204,20 @@ class NeuralNetwork:
 			o = o2
 
 	def train(self, X, y, batch = 32, n_epoch = 5, l = 0, reg = "none"):
-		#index = np.random.randint(X.shape[0], size = X.shape[0]*0.8)
-		t_size = int(X.shape[0]*0.8)
+		#t_size = int(X.shape[0]*0.8)
+		t_size = X.shape[0]
 		X_train = X[:t_size, :]
 		Xu = np.mean(X_train, axis=0)
 		X_train = (X_train-Xu)/255.0
 		y_train = y[:t_size, :]
+		"""
 		X_test = X[t_size: , :]
 		Xu = np.mean(X_test, axis=0)
 		X_test = (X_test-Xu)/255.0  
 		y_test = y[t_size: , :]  
-		initial=self.layers[0].weights[0,:1]
-		train_error = np.zeros(n_epoch)
-		test_error = np.zeros(n_epoch)
+		"""
+		train_error = np.zeros(int(n_epoch/10))
+		test_error = np.zeros(int(n_epoch/10))
 		#train_acc = np.zeros(n_epoch)
 		#test_acc = np.zeros(n_epoch)
 		i = 0 
@@ -227,19 +228,16 @@ class NeuralNetwork:
 			outputs = self.forwardPass(input_X.T, train = True)
 			# print (outputs)
 			self.backProp(input_y.T, outputs, reg=reg, l=l)
-			train_error[i], _ = self.costFunc(input_y.T, outputs, 0, 'none')
-			#train_acc[i] = accuracy(input_y, outputs.T)
-			outputs_test = self.forwardPass(X_test.T, train = False)
-			test_error[i], _ = self.costFunc(y_test.T, outputs_test, 0, 'none') 
-			#test_acc[i] = accuracy(y_test, outputs_test.T)
-			i += 1
-			# print("weights") 
-			# initial=self.layers[0].weights[0,:1]
-			if (i%10==0): print(i, train_error[i-1]) 
-		# print(initial-self.layers[0].weights[0,:])
-		# print(np.count_nonzero(initial-self.layers[0].weights[0,:]))
-		plt.plot(np.arange(1,n_epoch+1), train_error, label='training error')
-		plt.plot(np.arange(1,n_epoch+1), test_error, label='validation error')
+			if (i%10 == 0):
+				train_error[int(i/10)], _ = self.costFunc(input_y.T, outputs, 0, 'none')
+				#train_acc[i] = accuracy(input_y, outputs.T)
+				#outputs_test = self.forwardPass(X_test.T, train = False)
+				#test_error[i], _ = self.costFunc(y_test.T, outputs_test, 0, 'none')
+				if (i%100==0): print(i, train_error[int(i/10)]) 
+			i += 1 
+
+		plt.plot(np.arange(1,train_error.shape[0]+1), train_error, label='training error')
+		#plt.plot(np.arange(1,n_epoch+1), test_error, label='validation error')
 		plt.xlabel('no. of epochs')
 		plt.ylabel('error')
 		plt.legend()
@@ -267,27 +265,19 @@ class Dropout(Layer):
 
 	def forward(self, inp, train = True):
 		self.inp = inp
-		#print (self.bias.shape)
 		self.z = np.matmul(self.weights.T, self.inp) + self.bias
-		#print (train)
 
 		if (train == True):
 			self.drop = np.random.binomial(1, self.prob, size = self.units)
-			print (np.count_nonzero(self.drop))
 			self.drop = self.drop.reshape(self.drop.shape[0],1)
-			#print (np.multiply(self.activate(self.z), self.drop))
-			#print (np.count_nonzero(np.multiply(self.activate(self.z), self.drop)))
 			return np.multiply(self.activate(self.z), self.drop)
 		else:
-			#print (self.activate(self.z) * self.prob)
-			#print (np.count_nonzero(self.activate(self.z) * self.prob))
 			return self.activate(self.z) * self.prob
 
 	def backprop(self, delta1, rate, out, reg = "none", l = 0, cost = 'crossent'): 
 		delta = np.multiply(delta1, self.act_deriv(self.z, out)) # this is the real delta
 		delta = np.multiply(delta, self.drop)
 		self.gradb = np.sum(delta,axis = 1).reshape(self.units,1)
-		#print (self.gradb.shape)
 		self.gradW = np.matmul(self.inp, delta.T)
 		self.bias = self.bias - rate*self.gradb
 		
@@ -341,10 +331,10 @@ if __name__ == '__main__':
 	m = 9 # no of classes
 	lrate = 1e-3
 
-	neurons = [Dropout(0.5, D, 256, 'sigmoid'), Dropout(0.5, 256, 128, 'sigmoid'), Layer(128 ,m, 'softmax')]
-	NN = NeuralNetwork(3, D, m, cost = 'crossent', layers = neurons, rate = lrate)
-	labels, images, test_labels, test_images = load_data('emnist-balanced.mat')
-	NN.train(images, labels, n_epoch = 1)
+	neurons = [Dropout(0.5, D, 128, 'l_relu', alpha=0.01), Layer(128 ,m, 'softmax')]
+	NN = NeuralNetwork(2, D, m, cost = 'crossent', layers = neurons, rate = lrate)
+	labels, images, test_labels, test_images = load_data('assignment1/emnist-balanced.mat')
+	NN.train(images, labels, n_epoch = 10000, batch= 20)
 	test_out = NN.predict(test_images)
 	error = accuracy(test_out, test_labels)
 	print (error,"%")
