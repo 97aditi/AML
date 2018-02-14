@@ -235,13 +235,13 @@ class NeuralNetwork:
 				#test_error[i], _ = self.costFunc(y_test.T, outputs_test, 0, 'none')
 				if (i%100==0): print(i, train_error[int(i/10)]) 
 			i += 1 
-
-		plt.plot(np.arange(1,train_error.shape[0]+1), train_error, label='training error')
-		#plt.plot(np.arange(1,n_epoch+1), test_error, label='validation error')
-		plt.xlabel('no. of epochs')
-		plt.ylabel('error')
-		plt.legend()
-		plt.show()
+		if verbose:	
+			plt.plot(np.arange(1,train_error.shape[0]+1), train_error, label='training error')
+			#plt.plot(np.arange(1,n_epoch+1), test_error, label='validation error')
+			plt.xlabel('no. of epochs')
+			plt.ylabel('error')
+			plt.legend()
+			plt.show()
 
 	def predict(self, inputarr):
 		out = self.forwardPass(inputarr.T, train = False)
