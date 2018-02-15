@@ -350,18 +350,33 @@ def confusion_matrix(result, truth, n_classes):
 	ax.set_yticks([0,1,2,3,4,5,6,7,8])
 	ax.set_yticklabels(['A','D','G','H','I','J','K','N','O'],rotation=90)
 	plt.show()
-
+	
+def f1_score(result, truth):
+	res = np.argmax(result, 1)
+	tru = np.argmax(truth, 1)
+	ix = tru == res
+	ix = ix[ix == True]
+	tp = len(ix)
+	fp = len(res) - tp 
+	fn = len(tru) - tp
+	
+	if tp > 0:
+		precision = float(tp)/(tp + fp)
+		recall = float(tp)/(tp + fn)
+		return 2 * ((precision * recall)/(precision + recall))
+	else:
+		return 0
 	
 if __name__ == '__main__':		
 	## Hyper-parameters
 	D = 784 # input dimension
 	m = 9 # no of classes
-	lrate = 0.001
+	lrate = 0.01
 
-	neurons = [Layer(D, 256, 'l_relu'),Layer(256 ,m, 'softmax')]
-	NN = NeuralNetwork(2, D, m, cost = 'crossent', layers = neurons, rate = lrate)
+	neurons = [Layer(D, 512, 'l_relu',alpha=0.01),Layer(512, 256, 'l_relu',alpha=0.01),Layer(256 ,m, 'softmax')]
+	NN = NeuralNetwork(3, D, m, cost = 'crossent', layers = neurons, rate = lrate)
 	labels, images, test_labels, test_images = load_data('emnist-balanced.mat')
-	NN.train(images, labels, n_epoch = 10000, batch= 64, reg="l1", l=0.01)
+	NN.train(images, labels, n_epoch = 5000, batch= 64, reg="none", l=0.001)
 	test_out = NN.predict(test_images)
 	error = accuracy(test_out, test_labels)
 	print (error,"%")
@@ -372,6 +387,6 @@ if __name__ == '__main__':
 		wt=np.append(wt,NN.layers[i].weights.reshape(d))
 	plt.hist(wt,edgecolor='r',bins=50, range=[-0.2,0.2])
 	plt.xlabel("Magnitude of weights")
-	plt.xlabel("Frequeny")
+	plt.ylabel("Frequency")
 	plt.show()
 	
