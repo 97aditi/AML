@@ -132,8 +132,8 @@ class Batchnorm(Layer):
 		self.z = np.multiply(self.gamma,self.x_cap) + self.beta
 		return self.z
 
-	def deriv(self,Z, delta1):
-		m,D = Z.shape
+	def deriv(self, delta1):
+		m,D = self.z.shape
 		Xmean = self.inp - self.mu;
 		inv_var = 1.0/(np.sqrt(self.var))
 		gradXcap = np.multiply(self.gamma, delta1)
@@ -145,7 +145,7 @@ class Batchnorm(Layer):
 		return gradX
 
 	def backprop(self, delta1, rate, out, reg="none", l=0, cost = "crossent"): 
-		delta = self.deriv(self.z, delta1) # this is the real delta
+		delta = self.deriv(delta1) # this is the real delta
 		self.gradbeta = np.sum(delta1,axis = 1).reshape(self.units,1)
 		self.gradgamma = np.sum(np.multiply(self.x_cap,delta1), axis=1).reshape(self.units,1)
 		self.beta = self.beta - rate*self.gradbeta
@@ -204,19 +204,16 @@ class NeuralNetwork:
 			delta1 = delta
 			o = o2
 
-	def train(self, X, y, batch = 32, n_epoch = 5, l = 0, reg = "none", verbose=True):
-		#t_size = int(X.shape[0]*0.8)
-		t_size = X.shape[0]
+	def train(self, X, y, batch = 32, n_epoch = 1000, l = 0, reg = "none", verbose=True):
+		t_size = int(X.shape[0]*0.8)
 		X_train = X[:t_size, :]
 		Xu = np.mean(X_train, axis=0)
 		X_train = (X_train-Xu)/255.0
 		y_train = y[:t_size, :]
-		"""
 		X_test = X[t_size: , :]
 		Xu = np.mean(X_test, axis=0)
 		X_test = (X_test-Xu)/255.0  
 		y_test = y[t_size: , :]  
-		"""
 		train_error = np.zeros(int(n_epoch/10))
 		test_error = np.zeros(int(n_epoch/10))
 		#train_acc = np.zeros(n_epoch)
@@ -232,14 +229,14 @@ class NeuralNetwork:
 			if (i%10 == 0 and verbose):
 				train_error[int(i/10)], _ = self.costFunc(input_y.T, outputs, 0, 'none')
 				#train_acc[i] = accuracy(input_y, outputs.T)
-				#outputs_test = self.forwardPass(X_test.T, train = False)
-				#test_error[i], _ = self.costFunc(y_test.T, outputs_test, 0, 'none')
-				if (i%100==0): print(i, train_error[int(i/10)]) 
+				outputs_test = self.forwardPass(X_test.T, train = False)
+				test_error[int(i/10)], _ = self.costFunc(y_test.T, outputs_test, 0, 'none')
+				if (i%100==0): print(i, test_error[int(i/10)]) 
 			i += 1 
 		if verbose:	
 			plt.plot(np.arange(1,train_error.shape[0]+1), train_error, label='training error')
-			#plt.plot(np.arange(1,n_epoch+1), test_error, label='validation error')
-			plt.xlabel('no. of epochs')
+			plt.plot(np.arange(1,test_error.shape[0]+1), test_error, label='validation error')
+			plt.xlabel('no. of epochs (x10)')
 			plt.ylabel('error')
 			plt.legend()
 			plt.show()
@@ -322,7 +319,6 @@ def load_data(path):
 def accuracy(result, truth):
 	res = np.argmax(result,1)
 	tru = np.argmax(truth, 1)
-	print(tru.shape)
 	ix = res == tru
 	correct = np.sum(ix)
 	total = res.shape[0]
@@ -355,14 +351,12 @@ def confusion_matrix(result, truth, n_classes):
 	ax.set_yticklabels(['A','D','G','H','I','J','K','N','O'],rotation=90)
 	plt.show()
 
-
-
 	
 if __name__ == '__main__':		
 	## Hyper-parameters
 	D = 784 # input dimension
 	m = 9 # no of classes
-	lrate = 0.01
+	lrate = 0.001
 
 	neurons = [Layer(D, 256, 'l_relu'),Layer(256 ,m, 'softmax')]
 	NN = NeuralNetwork(2, D, m, cost = 'crossent', layers = neurons, rate = lrate)

@@ -18,9 +18,9 @@ def KFoldCV(X, y, l, k=3):
 		y_train = np.concatenate((y[:st,:], y[end:,:]), axis=0)
 		X_test = X[st:end, :]
 		y_test = y[st:end, :]
-		neurons = [net.Layer(D , 256, 'l_relu'), net.Layer(256, 100, 'l_relu'), net.Layer(100, m, 'softmax')]
-		NN = net.NeuralNetwork(3, D, m, cost = 'crossent', layers = neurons, rate = lrate)
-		NN.train(X_train, y_train, n_epoch = 1000, batch= l, verbose = False)
+		neurons = [net.Layer(D, m, 'softmax')]
+		NN = net.NeuralNetwork(1, D, m, cost = 'crossent', layers = neurons, rate = lrate)
+		NN.train(X_train, y_train, n_epoch = 1000, batch= 20, verbose = False, reg="l2", l=l)
 		out = NN.predict(X_train)
 		tr_acc += net.accuracy(out, y_train)
 		out = NN.predict(X_test)
@@ -32,19 +32,10 @@ def KFoldCV(X, y, l, k=3):
 
 
 labels, images, test_labels, test_images = net.load_data('assignment1/emnist-balanced.mat')
-"""
-t_size = int(images.shape[0]*0.8)
-X_train = images[:t_size, :]
-Xu = np.mean(X_train, axis=0)
-X_train = (X_train-Xu)/255.0
-y_train = labels[:t_size, :]
-X_test = images[t_size: , :]
-Xu = np.mean(X_test, axis=0)
-X_test = (X_test-Xu)/255.0  
-y_test = labels[t_size: , :]  
-"""
+Xu = np.mean(images, axis=0)
+images = (images - Xu)/255.0
 
-lrange = [8, 16, 32, 64, 80, 100]
+lrange = [0.001, 0.003, 0.01, 0.03, 0.1, 0.3, 1, 3]
 tst_acc = []
 tr_acc = []
 maxa = 0
@@ -62,7 +53,7 @@ print ((i, maxa))
 plt.plot(lrange, tst_acc, label='validation accuracy')
 plt.plot(lrange, tr_acc, label='training accuracy')
 plt.title("hyper-parameter tuning")
-plt.xlabel("batch size")
+plt.xlabel("reg parameter")
 plt.ylabel("accuracy %")
 plt.legend()
 plt.show()
