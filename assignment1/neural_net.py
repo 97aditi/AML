@@ -90,11 +90,12 @@ class Layer:
 		return d
 
 	def tanh(self, x):
-		num = np.sum(1, -1*np.exp(-np.multiply(2,x)))
-		den = np.sum(1, np.exp(--np.multiply(2,x)))
+		ones = np.ones((x.shape[0], x.shape[1]))
+		num = ones - np.exp(-np.multiply(2,x))
+		den = ones + np.exp(-np.multiply(2,x))
 		return (num/den)
 
-	def tanh_deriv(self, x, out):
+	def tanh_deriv(self, out):
 		return (1 - (out**2))
 
 	def leaky_relu(self, x):
@@ -186,7 +187,7 @@ class NeuralNetwork:
 		if(reg == 'l2'):
 			sum = 0
 			for i in range(self.n_layers):
-				sum  = sum + l*sum
+				sum  = sum + np.sum(np.square(self.layers[i].weights))
 		elif(reg =='l1'):
 			sum = 0
 			for i in range(self.n_layers):
@@ -242,8 +243,6 @@ class NeuralNetwork:
 			plt.ylabel('error')
 			plt.legend()
 			plt.show()
-		# if(reg=='l2'):
-		# 	plt.plot(np.histogram(self.layers.weights))
 
 
 	def predict(self, inputarr):
@@ -345,8 +344,8 @@ def confusion_matrix(result, truth, n_classes):
 	ax = fig.add_subplot(111)
 	ax.imshow(np.array(confuse), cmap=plt.cm.jet, interpolation='nearest')
 	width, height = confuse.shape
-	for x in xrange(width):
-		for y in xrange(height):
+	for x in range(width):
+		for y in range(height):
 			ax.annotate(str(confuse[x][y]), xy=(y, x),horizontalalignment='center',verticalalignment='center')
 	ax.set_xlabel('Predicted Label', fontsize=12)
 	ax.set_xticks([0,1,2,3,4,5,6,7,8])
@@ -365,15 +364,20 @@ if __name__ == '__main__':
 	m = 9 # no of classes
 	lrate = 0.01
 
-	neurons = [Layer(D, 256, 'l_relu'), Layer(256, 100, 'l_relu'), Layer(100 ,m, 'softmax')]
-	NN = NeuralNetwork(3, D, m, cost = 'crossent', layers = neurons, rate = lrate)
+	neurons = [Layer(D, 256, 'l_relu'),Layer(256 ,m, 'softmax')]
+	NN = NeuralNetwork(2, D, m, cost = 'crossent', layers = neurons, rate = lrate)
 	labels, images, test_labels, test_images = load_data('emnist-balanced.mat')
-	NN.train(images, labels, n_epoch = 10, batch= 64, reg="l2", l=0.01)
+	NN.train(images, labels, n_epoch = 10000, batch= 64, reg="l1", l=0.01)
 	test_out = NN.predict(test_images)
 	error = accuracy(test_out, test_labels)
 	print (error,"%")
 	confusion_matrix(test_out, test_labels, m)
-	# wt=np.zeros(0)
-	# for i in range(NN.n_layers):
-	# 	wt=np.append(wt,NN.layers[i].weights.reshape((NN.layers[i].units)*(NN.layers[i].))
-	# print(wt.shape)
+	wt=np.zeros(0)
+	for i in range(NN.n_layers):
+		d=NN.layers[i].units*NN.layers[i].units_in_prev
+		wt=np.append(wt,NN.layers[i].weights.reshape(d))
+	plt.hist(wt,edgecolor='r',bins=50, range=[-0.2,0.2])
+	plt.xlabel("Magnitude of weights")
+	plt.xlabel("Frequeny")
+	plt.show()
+	
