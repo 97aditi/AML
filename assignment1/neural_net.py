@@ -41,11 +41,15 @@ class Layer:
 					i+=1                                                                         
 		else:
 			delta = np.multiply(delta1, self.act_deriv(self.z, out)) # this is the real delta
+
 		self.gradb = np.sum(delta,axis = 1).reshape(self.units,1)
 		self.gradW = np.matmul(self.inp, delta.T)
-		self.bias = self.bias - rate*self.gradb
+
 		if(adam==1):
 			self.adam(rate=rate,beta1=0.9,beta2=0.999,epi=1e-8)
+
+		self.bias = self.bias - rate*self.gradb
+
 
 		if(reg =='none'):
 			self.weights = self.weights - rate*self.gradW
