@@ -16,7 +16,7 @@ class Layer:
 		self.gradb = None
 		self.train = train 
 		self.alpha = alpha
-		self.t=0.0
+		self.t=1.0
 		self.m_t=np.zeros((self.units_in_prev,self.units), dtype='float')
 		self.v_t=np.zeros((self.units_in_prev,self.units))
 		self.m_tb=np.zeros((self.units,1))
@@ -55,25 +55,24 @@ class Layer:
 			self.weights = self.weights - rate*self.gradW - rate*l*np.sign(self.weights)
 		return np.matmul(self.weights, delta), self.inp  # this is delta1, passes onto next layer; NOT delta of the next layer
 
-	def adam(self, rate, beta1=0.9, beta2=0.99, epi=1e-5):
-		beta1=beta1
-		beta2=beta2
-		epi=epi
+	def adam(self, rate, beta1=0.9, beta2=0.99, epi=1e-8):
 		self.m_t=np.multiply(beta1,self.m_t)+np.multiply((1-beta2),self.gradW)
 		self.v_t=np.multiply(beta2,self.v_t)+np.multiply((1-beta2),np.multiply(self.gradW, self.gradW))
 		self.m_tb=np.multiply(beta1,self.m_tb)+np.multiply((1-beta1),self.gradb)
 		self.v_tb=np.multiply(beta2,self.v_tb)+np.multiply((1-beta2),np.multiply(self.gradb, self.gradb))
 
-		denom1=np.around((1.0-beta1)**self.t, decimals=64)
-		denom2=np.around((1.0-beta2)**self.t, decimals=64)
-		m_tcap=np.clip(np.divide(self.m_t,denom1),-500,500)
-		v_tcap=np.clip(np.divide(self.v_t,denom2),-500,500)
-		m_tbcap=np.clip(np.divide(self.m_tb,denom1),-500,500)
-		v_tbcap=np.clip(np.divide(self.v_tb,denom2),-500,500)
+		denom1=1.0-beta1**self.t
+		denom2=1.0-beta2**self.t
+		# print(denom2)
+		m_tcap=np.divide(self.m_t,denom1)
+		v_tcap=np.divide(self.v_t,denom2)
+		m_tbcap=np.divide(self.m_tb,denom1)
+		v_tbcap=np.divide(self.v_tb,denom2)
 
 		self.gradW=np.divide(m_tcap, np.sqrt(v_tcap)+epi)
 		self.gradb=np.divide(m_tbcap, np.sqrt(v_tbcap)+epi)
 		self.t=self.t+1
+
 
 
 
@@ -405,10 +404,10 @@ if __name__ == '__main__':
 	m = 9 # no of classes
 	lrate = 0.001
 
-	neurons = [Layer(D, 512, 'l_relu',alpha=0.01),Layer(512, 256, 'l_relu',alpha=0.01),Layer(256 ,m, 'softmax')]
-	NN = NeuralNetwork(3, D, m, cost = 'crossent', layers = neurons, rate = lrate)
+	neurons = [Dropout(0.6,D, 512, 'l_relu',alpha=0.01),Batchnorm(512),Layer(512, 256, 'l_relu', alpha=0.01), Batchnorm(256), Layer(256 ,m, 'softmax')]
+	NN = NeuralNetwork(5, D, m, cost = 'crossent', layers = neurons, rate = lrate)
 	labels, images, test_labels, test_images = load_data('emnist-balanced.mat')
-	NN.train(images, labels, n_epoch = 1000, batch= 64, reg="none", l=0.001)
+	NN.train(images, labels, n_epoch = 5000, batch= 64, reg="none", l=0.001)
 	test_out = NN.predict(test_images)
 	error = accuracy(test_out, test_labels)
 	print (error,"%")
