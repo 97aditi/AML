@@ -147,12 +147,19 @@ class Batchnorm(Layer):
 		self.x_cap = np.zeros((units_prev,1))
 		self.units = units_prev
 		self.units_in_prev = units_prev
-		self.gamma = np.random.randn(self.units,1);
-		self.beta = np.random.randn(self.units,1);
+		self.weights = np.random.randn(self.units,1); #gamma
+		self.bias = np.random.randn(self.units,1); #beta
 		self.z = np.zeros((self.units, 1)) # z = (w^l)T a^l-1 + b^l
-		self.gradbeta = None
-		self.gradgamma = None
+		self.gradb = None
+		self.gradW = None
 		self.epsilon = 1e-5
+		self.t=1.0
+		self.m_t=np.zeros((self.units,1), dtype='float')
+		self.v_t=np.zeros((self.units,1))
+		self.m_tb=np.zeros((self.units,1))
+		self.v_tb=np.zeros((self.units,1))
+
+
 		
 
 	def forward(self,inp, train = True):
@@ -161,14 +168,14 @@ class Batchnorm(Layer):
 		self.var = np.var(self.inp, axis=1) + self.epsilon
 		self.var=self.var.reshape(self.units,1)
 		self.x_cap = np.divide(self.inp-self.mu, np.sqrt(self.var))
-		self.z = np.multiply(self.gamma,self.x_cap) + self.beta
+		self.z = np.multiply(self.weights,self.x_cap) + self.bias
 		return self.z
 
 	def deriv(self, delta1):
 		m,D = self.z.shape
 		Xmean = self.inp - self.mu;
 		inv_var = 1.0/(np.sqrt(self.var))
-		gradXcap = np.multiply(self.gamma, delta1)
+		gradXcap = np.multiply(self.weights, delta1)
 		gradvar = np.sum(gradXcap*Xmean*(-0.5)*(inv_var**3), axis=1).reshape(self.units,1)
 		gradmu = np.sum(-gradXcap*inv_var, axis=1)+ np.mean(-2*Xmean, axis=1)
 		gradmu = gradmu.reshape(self.units, 1)
@@ -176,13 +183,17 @@ class Batchnorm(Layer):
 		gradX=np.clip(gradX, -500, 500)
 		return gradX
 
-	def backprop(self, delta1, rate, out, reg="none", l=0, cost = "crossent"): 
+	def backprop(self, delta1, rate, out, reg="none", l=0, cost = "crossent",adam=1): 
 		delta = self.deriv(delta1) # this is the real delta
-		self.gradbeta = np.sum(delta1,axis = 1).reshape(self.units,1)
-		self.gradgamma = np.sum(np.multiply(self.x_cap,delta1), axis=1).reshape(self.units,1)
-		self.beta = self.beta - rate*self.gradbeta
-		self.gamma = self.gamma - rate*self.gradgamma
-		return np.multiply(self.gamma, delta), self.inp
+		self.gradb = np.sum(delta1,axis = 1).reshape(self.units,1)
+		self.gradW = np.sum(np.multiply(self.x_cap,delta1), axis=1).reshape(self.units,1)
+
+		if(adam==1):
+			self.adam(rate=rate,beta1=0.9,beta2=0.999,epi=1e-8)
+
+		self.bias = self.bias - rate*self.gradb
+		self.weights = self.weights - rate*self.gradW
+		return np.multiply(self.weights, delta), self.inp
 
 
 
@@ -294,6 +305,13 @@ class Dropout(Layer):
 		self.gradW = None
 		self.gradb = None 
 		self.alpha = alpha
+		self.t=1.0
+		self.m_t=np.zeros((self.units_in_prev,self.units), dtype='float')
+		self.v_t=np.zeros((self.units_in_prev,self.units))
+		self.m_tb=np.zeros((self.units,1))
+		self.v_tb=np.zeros((self.units,1))
+
+
 
 	def forward(self, inp, train = True):
 		self.inp = inp
@@ -306,13 +324,15 @@ class Dropout(Layer):
 		else:
 			return self.activate(self.z) * (1-self.prob)
 
-	def backprop(self, delta1, rate, out, reg = "none", l = 0, cost = 'crossent'): 
+	def backprop(self, delta1, rate, out, reg = "none", l = 0, cost = 'crossent',adam=1): 
 		delta = np.multiply(delta1, self.act_deriv(self.z, out)) # this is the real delta
 		delta = np.multiply(delta, self.drop)
 		self.gradb = np.sum(delta,axis = 1).reshape(self.units,1)
 		self.gradW = np.matmul(self.inp, delta.T)
+		if(adam==1):
+			self.adam(rate=rate,beta1=0.9,beta2=0.999,epi=1e-8)
+
 		self.bias = self.bias - rate*self.gradb
-		
 		self.weights = self.weights - rate*self.gradW
 		return np.matmul(self.weights, delta), self.inp  
 		# this is delta1, passes onto next layer; NOT delta of the next layer
@@ -406,10 +426,10 @@ if __name__ == '__main__':
 	m = 9 # no of classes
 	lrate = 0.001
 
-	neurons = [Dropout(0.6,D, 512, 'l_relu',alpha=0.01),Batchnorm(512),Layer(512, 256, 'l_relu', alpha=0.01), Batchnorm(256), Layer(256 ,m, 'softmax')]
+	neurons = [Dropout(0.6,D, 512, 'l_relu',alpha=0.01), Batchnorm(512), Layer(512, 256, 'l_relu',alpha=0.01), Batchnorm(256), Layer(256 ,m, 'softmax')]
 	NN = NeuralNetwork(5, D, m, cost = 'crossent', layers = neurons, rate = lrate)
 	labels, images, test_labels, test_images = load_data('emnist-balanced.mat')
-	NN.train(images, labels, n_epoch = 5000, batch= 64, reg="none", l=0.001)
+	NN.train(images, labels, n_epoch = 2000, batch= 64, reg="none", l=0.001)
 	test_out = NN.predict(test_images)
 	error = accuracy(test_out, test_labels)
 	print (error,"%")
