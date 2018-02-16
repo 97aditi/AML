@@ -16,13 +16,19 @@ class Layer:
 		self.gradb = None
 		self.train = train 
 		self.alpha = alpha
+		self.t=0.0
+		self.m_t=np.zeros((self.units_in_prev,self.units), dtype='float')
+		self.v_t=np.zeros((self.units_in_prev,self.units))
+		self.m_tb=np.zeros((self.units,1))
+		self.v_tb=np.zeros((self.units,1))
+
 
 	def forward(self, inp, train= True):
 		self.inp = inp
 		self.z = np.matmul(self.weights.T, self.inp) + self.bias
 		return self.activate(self.z)
 
-	def backprop(self, delta1, rate, out, reg="none", l=0, cost = "crossent"): 
+	def backprop(self, delta1, rate, out, reg="none", l=0, cost = "crossent", adam=1): 
 		if(self.act == 'softmax'):
 			if (cost=="crossent"):
 				delta = delta1
@@ -38,6 +44,9 @@ class Layer:
 		self.gradb = np.sum(delta,axis = 1).reshape(self.units,1)
 		self.gradW = np.matmul(self.inp, delta.T)
 		self.bias = self.bias - rate*self.gradb
+		if(adam==1):
+			self.adam(rate=rate,beta1=0.9,beta2=0.999,epi=1e-8)
+
 		if(reg =='none'):
 			self.weights = self.weights - rate*self.gradW
 		elif(reg == 'l2'):
@@ -45,6 +54,28 @@ class Layer:
 		elif(reg == 'l1'):
 			self.weights = self.weights - rate*self.gradW - rate*l*np.sign(self.weights)
 		return np.matmul(self.weights, delta), self.inp  # this is delta1, passes onto next layer; NOT delta of the next layer
+
+	def adam(self, rate, beta1=0.9, beta2=0.99, epi=1e-5):
+		beta1=beta1
+		beta2=beta2
+		epi=epi
+		self.m_t=np.multiply(beta1,self.m_t)+np.multiply((1-beta2),self.gradW)
+		self.v_t=np.multiply(beta2,self.v_t)+np.multiply((1-beta2),np.multiply(self.gradW, self.gradW))
+		self.m_tb=np.multiply(beta1,self.m_tb)+np.multiply((1-beta1),self.gradb)
+		self.v_tb=np.multiply(beta2,self.v_tb)+np.multiply((1-beta2),np.multiply(self.gradb, self.gradb))
+
+		denom1=np.around((1.0-beta1)**self.t, decimals=64)
+		denom2=np.around((1.0-beta2)**self.t, decimals=64)
+		m_tcap=np.clip(np.divide(self.m_t,denom1),-500,500)
+		v_tcap=np.clip(np.divide(self.v_t,denom2),-500,500)
+		m_tbcap=np.clip(np.divide(self.m_tb,denom1),-500,500)
+		v_tbcap=np.clip(np.divide(self.v_tb,denom2),-500,500)
+
+		self.gradW=np.divide(m_tcap, np.sqrt(v_tcap)+epi)
+		self.gradb=np.divide(m_tbcap, np.sqrt(v_tbcap)+epi)
+		self.t=self.t+1
+
+
 
 	def activate(self, x):
 		if(self.act == "sigmoid"):
@@ -205,17 +236,17 @@ class NeuralNetwork:
 			o = o2
 
 	def train(self, X, y, batch = 32, n_epoch = 1000, l = 0, reg = "none", verbose=True):
-		t_size = int(X.shape[0]*0.8)
-		X_train = X[:t_size, :]
-		Xu = np.mean(X_train, axis=0)
-		X_train = (X_train-Xu)/255.0
-		y_train = y[:t_size, :]
-		X_test = X[t_size: , :]
-		Xu = np.mean(X_test, axis=0)
-		X_test = (X_test-Xu)/255.0  
-		y_test = y[t_size: , :]  
+		t_size = X.shape[0]
+		#X_train = X[:t_size, :]
+		Xu = np.mean(X, axis=0)
+		X_train = (X-Xu)/255.0
+		y_train = y
+		#X_test = X[t_size: , :]
+		#Xu = np.mean(X_test, axis=0)
+		#X_test = (X_test-Xu)/255.0  
+		#y_test = y[t_size: , :]  
 		train_error = np.zeros(int(n_epoch/10))
-		test_error = np.zeros(int(n_epoch/10))
+		#test_error = np.zeros(int(n_epoch/10))
 		#train_acc = np.zeros(n_epoch)
 		#test_acc = np.zeros(n_epoch)
 		i = 0 
@@ -229,15 +260,16 @@ class NeuralNetwork:
 			if (i%10 == 0 and verbose):
 				train_error[int(i/10)], _ = self.costFunc(input_y.T, outputs, 0, 'none')
 				#train_acc[i] = accuracy(input_y, outputs.T)
-				outputs_test = self.forwardPass(X_test.T, train = False)
-				test_error[int(i/10)], _ = self.costFunc(y_test.T, outputs_test, 0, 'none')
-				if (i%100==0): print(i, test_error[int(i/10)]) 
+				#outputs_test = self.forwardPass(X_test.T, train = False)
+				#test_error[int(i/10)], _ = self.costFunc(y_test.T, outputs_test, 0, 'none')
+				if (i%100==0): print(i, train_error[int(i/10)]) 
 			i += 1 
 		if verbose:	
 			plt.plot(np.arange(1,train_error.shape[0]+1), train_error, label='training error')
-			plt.plot(np.arange(1,test_error.shape[0]+1), test_error, label='validation error')
+			#plt.plot(np.arange(1,test_error.shape[0]+1), test_error, label='validation error')
 			plt.xlabel('no. of epochs (x10)')
 			plt.ylabel('error')
+			plt.title("Dropout and Batchnorm")
 			plt.legend()
 			plt.show()
 
@@ -350,7 +382,7 @@ def confusion_matrix(result, truth, n_classes):
 	ax.set_yticks([0,1,2,3,4,5,6,7,8])
 	ax.set_yticklabels(['A','D','G','H','I','J','K','N','O'],rotation=90)
 	plt.show()
-	
+
 def f1_score(result, truth):
 	res = np.argmax(result, 1)
 	tru = np.argmax(truth, 1)
@@ -371,12 +403,12 @@ if __name__ == '__main__':
 	## Hyper-parameters
 	D = 784 # input dimension
 	m = 9 # no of classes
-	lrate = 0.01
+	lrate = 0.001
 
 	neurons = [Layer(D, 512, 'l_relu',alpha=0.01),Layer(512, 256, 'l_relu',alpha=0.01),Layer(256 ,m, 'softmax')]
 	NN = NeuralNetwork(3, D, m, cost = 'crossent', layers = neurons, rate = lrate)
 	labels, images, test_labels, test_images = load_data('emnist-balanced.mat')
-	NN.train(images, labels, n_epoch = 5000, batch= 64, reg="none", l=0.001)
+	NN.train(images, labels, n_epoch = 1000, batch= 64, reg="none", l=0.001)
 	test_out = NN.predict(test_images)
 	error = accuracy(test_out, test_labels)
 	print (error,"%")
