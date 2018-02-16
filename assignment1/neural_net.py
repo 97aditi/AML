@@ -49,8 +49,6 @@ class Layer:
 			self.adam(rate=rate,beta1=0.9,beta2=0.999,epi=1e-8)
 
 		self.bias = self.bias - rate*self.gradb
-
-
 		if(reg =='none'):
 			self.weights = self.weights - rate*self.gradW
 		elif(reg == 'l2'):
@@ -60,7 +58,7 @@ class Layer:
 		return np.matmul(self.weights, delta), self.inp  # this is delta1, passes onto next layer; NOT delta of the next layer
 
 	def adam(self, rate, beta1=0.9, beta2=0.99, epi=1e-8):
-		self.m_t=np.multiply(beta1,self.m_t)+np.multiply((1-beta2),self.gradW)
+		self.m_t=np.multiply(beta1,self.m_t)+np.multiply((1-beta1),self.gradW)
 		self.v_t=np.multiply(beta2,self.v_t)+np.multiply((1-beta2),np.multiply(self.gradW, self.gradW))
 		self.m_tb=np.multiply(beta1,self.m_tb)+np.multiply((1-beta1),self.gradb)
 		self.v_tb=np.multiply(beta2,self.v_tb)+np.multiply((1-beta2),np.multiply(self.gradb, self.gradb))
