@@ -18,8 +18,8 @@ def KFoldCV(X, y, l, k=3):
 		y_train = np.concatenate((y[:st,:], y[end:,:]), axis=0)
 		X_test = X[st:end, :]
 		y_test = y[st:end, :]
-		neurons = [net.Layer(D, m, 'softmax')]
-		NN = net.NeuralNetwork(1, D, m, cost = 'crossent', layers = neurons, rate = lrate)
+		neurons = [net.Layer(D, 256, 'l_relu'), net.Layer(256, m, 'softmax')]
+		NN = net.NeuralNetwork(2, D, m, cost = 'crossent', layers = neurons, rate = lrate)
 		NN.train(X_train, y_train, n_epoch = 1000, batch= 20, verbose = False, reg="l2", l=l)
 		out = NN.predict(X_train)
 		tr_acc += net.accuracy(out, y_train)
@@ -31,7 +31,7 @@ def KFoldCV(X, y, l, k=3):
 	return tr_acc, tst_acc
 
 
-labels, images, test_labels, test_images = net.load_data('assignment1/emnist-balanced.mat')
+labels, images, test_labels, test_images = net.load_data('emnist-balanced.mat')
 Xu = np.mean(images, axis=0)
 images = (images - Xu)/255.0
 

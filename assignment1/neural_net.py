@@ -28,7 +28,7 @@ class Layer:
 		self.z = np.matmul(self.weights.T, self.inp) + self.bias
 		return self.activate(self.z)
 
-	def backprop(self, delta1, rate, out, reg="none", l=0, cost = "crossent", adam=1): 
+	def backprop(self, delta1, rate, out, reg="none", l=0, cost = "crossent", adam=0): 
 		if(self.act == 'softmax'):
 			if (cost=="crossent"):
 				delta = delta1
@@ -123,8 +123,8 @@ class Layer:
 
 	def tanh(self, x):
 		ones = np.ones((x.shape[0], x.shape[1]))
-		num = ones - np.exp(-np.multiply(2,x))
-		den = ones + np.exp(-np.multiply(2,x))
+		num = np.clip(ones - np.exp(-np.multiply(2,x)),-500,500)
+		den = np.clip(ones + np.exp(-np.multiply(2,x)),-500,500)
 		return (num/den)
 
 	def tanh_deriv(self, out):
@@ -247,6 +247,8 @@ class NeuralNetwork:
 			delta1 = delta
 			o = o2
 
+
+	
 	def train(self, X, y, batch = 32, n_epoch = 1000, l = 0, reg = "none", verbose=True):
 		t_size = X.shape[0]
 		#X_train = X[:t_size, :]
@@ -281,9 +283,10 @@ class NeuralNetwork:
 			#plt.plot(np.arange(1,test_error.shape[0]+1), test_error, label='validation error')
 			plt.xlabel('no. of epochs (x10)')
 			plt.ylabel('error')
-			plt.title("Dropout and Batchnorm")
+			# plt.title("Dropout and Batchnorm")
 			plt.legend()
 			plt.show()
+
 
 
 	def predict(self, inputarr):
@@ -356,7 +359,7 @@ def load_data(path):
 	np.random.shuffle(ix)
 	labels = make_onehot(total_training_labels[ix])
 	train_size = len(labels)
-	#images = total_training_images[ix].reshape(train_size, 28, 28, 1)
+	images = total_training_images[ix].reshape(train_size, 28, 28, 1)
 	images = total_training_images[ix]
 
 	total_testing_images = data['dataset'][0][0][1][0][0][0][:].astype(np.float32)
@@ -424,12 +427,12 @@ if __name__ == '__main__':
 	## Hyper-parameters
 	D = 784 # input dimension
 	m = 9 # no of classes
-	lrate = 0.001
+	lrate = 0.01
 
-	neurons = [Dropout(0.6,D, 512, 'l_relu',alpha=0.01), Batchnorm(512), Layer(512, 256, 'l_relu',alpha=0.01), Batchnorm(256), Layer(256 ,m, 'softmax')]
-	NN = NeuralNetwork(5, D, m, cost = 'crossent', layers = neurons, rate = lrate)
+	neurons = [Layer(D,256,'l_relu'), Layer(256 ,m, 'softmax')]
+	NN = NeuralNetwork(2, D, m, cost = 'crossent', layers = neurons, rate = lrate)
 	labels, images, test_labels, test_images = load_data('emnist-balanced.mat')
-	NN.train(images, labels, n_epoch = 2000, batch= 64, reg="none", l=0.001)
+	NN.train(images, labels, n_epoch = 10000, batch= 64, reg="l1", l=0.001)
 	test_out = NN.predict(test_images)
 	error = accuracy(test_out, test_labels)
 	print (error,"%")
