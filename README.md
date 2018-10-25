@@ -10,8 +10,12 @@ Activation functions implemented
 4. tanh
 5. SoftMax
 
-It also implements common regularization techniques
+It implements common regularization techniques:
 * Dropout
 * Batch Normalization
 * L1 - Lasso
 * L2 - Ridge
+
+ ADAM optimiser is also implemented
+  
+ 
